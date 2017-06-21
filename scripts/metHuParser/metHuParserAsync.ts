@@ -1,0 +1,244 @@
+﻿import {Observable, TimeInterval} from "rx";
+import * as fs from "fs";
+import * as fcmUtils from "../utils/firebase";
+import {getAnyAsync, customHttpRequestAsync} from "../utils/httpQueries";
+import * as mongo from "../mongo/mongoDbSchemas";
+import {logger} from "../logger/logger";
+import {Entities} from "../interfaces/entities";
+import {Modules} from "../interfaces/modules";
+import IMetHuData = Entities.IMetHuData;
+import ILogger = Modules.ILogger;
+import IDeviceLocationRecent = Entities.IDeviceLocationRecent;
+import IAlertArea = Entities.IAlertArea;
+import IFcmBase = Entities.IFcmBase;
+import IMeteoAlert = Entities.IMeteoAlert;
+import IResult = Entities.IResult;
+import IMetHuEntityWithData = Entities.IMetHuEntityWithData;
+const htmlparser2 = require("htmlparser2");
+/*
+ Az OMSZ meteorológiai figyelmeztetéseit érkeztető, és kezelő osztály.  Bizonyos időközönként ellenőrzi a riasztásokat, amint a met.hu oldalról tölt le, majd kezeli azokat.
+ Elküldi a Socket.IO osztálynak is, hohy az esetleges kliensek fogadhassák azokat. Szükség esetén figyelmezteti az eszközöket is.
+ */
+class MetHuParser {
+
+    private timer: Observable<TimeInterval<number>>;
+    private metHuData: IMetHuData;
+    private countyHtmlParser: any;
+    private regionalUnitHtmlParser: any;
+
+    constructor(private logger: ILogger, ticktime: number) {
+        this.metHuData = <IMetHuData>(JSON.parse(fs.readFileSync('./JSON/metHuData.json', 'utf8')));
+        this.timer = Observable.timer(0, ticktime * 1000).timeInterval();
+        this.timer.subscribe(x => this.onTimerTick());
+
+        const countyHtmlHandler = new htmlparser2.DefaultHandler((error, dom: any) => {
+            if (!error) {
+                const data = this.domToAlertArea(dom, "county");
+                this.save(data);
+            }
+            else {
+                this.logger.sendErrorMessage(0, 0, "met.hu parser", `Parse county handler error: ${error}`, false);
+            }
+        });
+
+        const regionalUnitHtmlHandler = new htmlparser2.DefaultHandler((error, dom: any) => {
+            if (!error) {
+                let data = this.domToAlertArea(dom, "regionalUnit");
+                this.save(data);
+            }
+            else {
+                this.logger.sendErrorMessage(0, 0, "met.hu parser", `Parse regional unit handler error: ${error}`, false);
+            }
+        });
+
+        this.countyHtmlParser = new htmlparser2.Parser(countyHtmlHandler);
+        this.regionalUnitHtmlParser = new htmlparser2.Parser(regionalUnitHtmlHandler);
+    }
+
+
+    private static async notify(locations: Array<IDeviceLocationRecent>, alertArea: IAlertArea) {
+        if (locations.length !== 0) {
+            const fcmBase: IFcmBase = {
+                registration_ids: locations.map(x => x.did),
+                time_to_live: 1800,
+                data: {
+                    message: {
+                        mtype: 'ALERT',
+                        data: alertArea
+                    }
+                }
+            };
+            await customHttpRequestAsync(fcmUtils.firebaseSettings, fcmBase).toPromise();
+        }
+    }
+
+    private async save(alertArea: IAlertArea) {
+        if (alertArea != null) {
+            alertArea.alerts.forEach(async x => {
+                const result = await mongo.AlertsMongoModel.findOne({
+                    'areaName': alertArea.name,
+                    'areaType': alertArea.type,
+                    'level': x.level,
+                    'alertType': x.type,
+                    'timeLast': {'$eq': null}
+                });
+
+                if (result == null) {
+                    const strokeToInsert = new mongo.AlertsMongoModel({
+                        areaName: alertArea.name,
+                        areaType: alertArea.type,
+                        timeFirst: new Date(),
+                        timeLast: null,
+                        alertType: x.type,
+                        level: x.level,
+                        desc: null
+                    });
+
+                    await strokeToInsert.save();
+                    if (alertArea.type === "county") {
+                        const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.countyName': alertArea.name});
+                        await MetHuParser.notify(results, alertArea);
+                    } else {
+                        const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.regionalUnitName': alertArea.name});
+                        await MetHuParser.notify(results, alertArea);
+                    }
+                }
+            });
+
+            const results = await mongo.AlertsMongoModel.find({
+                'areaName': alertArea.name,
+                'areaType': alertArea.type,
+                'timeLast': {'$eq': null}
+            });
+
+            results.forEach(async result => {
+                const hasInRecent = alertArea.alerts.filter(x => x.type === result.alertType && x.level === result.level).length === 0;
+                if (hasInRecent) {
+                    await mongo.AlertsMongoModel.update({
+                        '_id': result._id
+                    }, {'timeLast': new Date()});
+                }
+            });
+        } else {
+        }
+    }
+
+    private domToAlertArea(dom: any, areaType: "regionalUnit" | "county"): IAlertArea {
+        try {
+            const data: IAlertArea = {
+                name: dom[1].children[1].children[0].children[0].data,
+                type: areaType,
+                alerts: []
+            };
+
+
+            dom[1].children.forEach(tablechild => {
+                if (tablechild.type === 'tag') {
+                    let alert: IMeteoAlert = {level: null, type: null};
+                    let has = false;
+                    tablechild.children.forEach(td => {
+                        if (td.type === 'tag' && td.name === "td") {
+                            if (td.attribs.class === "row1" || td.attribs.class === "row0") {
+                                if (td.children != undefined) {
+                                    td.children.forEach(alertElem => {
+                                        if (alertElem.type === "tag" && alertElem.name === "img") {
+                                            if (alertElem.attribs.src === "/images/warningb/w1.gif") {
+                                                alert.level = 1;
+                                                has = true;
+                                            }
+                                            else if (alertElem.attribs.src === "/images/warningb/w2.gif") {
+                                                alert.level = 2;
+                                                has = true;
+                                            }
+                                            else if (alertElem.attribs.src === "/images/warningb/w3.gif") {
+                                                alert.level = 3;
+                                                has = true;
+                                            }
+                                        }
+                                        if (alertElem.type === "text") {
+                                            alert.type = MetHuParser.getAlertCode(alertElem.data);
+                                            has = true;
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    });
+                    if (has) {
+                        data.alerts.push(alert);
+                    }
+                }
+            });
+
+            return data;
+        } catch (exc) {
+            this.logger.sendErrorMessage(0, 0, "met.hu parser", "Error during parse: " + exc.toString(), false);
+            return null;
+        }
+    }
+
+    private static async downloadData(code: number, type: "regionalUnit" | "county"): Promise<IResult<IMetHuEntityWithData>> {
+        const linkType = type === "county" ? "wbhx" : "wahx";
+        const rawData = await getAnyAsync(`http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`, 15000);
+        if (rawData.error) {
+            return Promise.resolve({error: rawData.error, result: null});
+        }
+        return Promise.resolve({error: null, result: {type: type, code: code, data: rawData.result}});
+    }
+
+    private async parseData(parser: any, entity: IMetHuEntityWithData): Promise<any> {
+        return new Promise((resolve, reject) => {
+            parser.parseComplete(entity.data, result => {
+            });
+            resolve(null);
+        })
+    }
+
+
+    private static getAlertCode(event: string) {
+        if (event === "Heves zivatar") return "H_THUNDER";
+        else if (event === "Széllökés") return "WIND";
+        else if (event === "Ónos eső") return "SLEET";
+        else if (event === "Hófúvás") return "SNOWDRIFT";
+        else if (event === "Eső") return "RAIN";
+        else if (event === "Havazás") return "SNOW";
+        else if (event === "Tartós, sűrű köd") return "FOG";
+        else if (event === "Talajmenti fagy") return "SURF_FROST";
+        else if (event === "Hőség (25 fokos középh.)") return "XTR_HOT25";
+        else if (event === "Hőség (27 fokos középh.)") return "XTR_HOT27";
+        else if (event === "Hőség") return "XTR_HOT";
+        else if (event === "Extrém hideg") return "XTR_COLD";
+        else if (event === "Felhőszakadás") return "RAINFALL";
+        return "OTHER";
+    }
+
+    public invoke(): void {
+
+    }
+
+    private async onTimerTick() {
+
+        this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading county data`, false);
+        let countyResponses = await Observable.fromArray(this.metHuData.counties).map(county => Observable.fromPromise(MetHuParser.downloadData(county, "county"))).merge(4).reduce((acc, value) => {
+            acc.push(value);
+            return acc;
+        }, []).toPromise();
+        this.logger.sendNormalMessage(227, 16, "met.hu parser", `All county data downloaded: ${countyResponses.length}`, false);
+        this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading regional unit data`, false);
+        let ruResponses = await Observable.fromArray(this.metHuData.regionalUnits).map(ru => Observable.fromPromise(MetHuParser.downloadData(ru, "regionalUnit"))).merge(4).reduce((acc, value) => {
+            acc.push(value);
+            return acc;
+        }, []).toPromise();
+        this.logger.sendNormalMessage(227, 16, "met.hu parser", `All regional unit data downloaded: ${ruResponses.length}`, false);
+
+        countyResponses = countyResponses.filter(x => x.error == null);
+        ruResponses = ruResponses.filter(x => x.error == null);
+
+        await Observable.fromArray(countyResponses).map(x => Observable.fromPromise(this.parseData(this.countyHtmlParser, x.result))).last().toPromise();
+        this.logger.sendNormalMessage(227, 16, "met.hu parser", `Counties parsed.`, false);
+        await Observable.fromArray(ruResponses).map(x => Observable.fromPromise(this.parseData(this.regionalUnitHtmlParser, x.result))).last().toPromise();
+        this.logger.sendNormalMessage(227, 16, "met.hu parser", `Regional units parsed.`, false);
+    }
+}
+
+export const metHuParser: Modules.IMetHuParser = new MetHuParser(logger, 90);

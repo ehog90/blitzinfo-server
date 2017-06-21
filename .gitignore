@@ -1,0 +1,10 @@
+/.idea/
+/.tscache/
+/.vscode/
+/dist/
+/.vs/
+/flagsOriginal/
+/flagsConverted/
+/scripts/restricted/restricted.ts
+/node_modules/
+/public/images/flagsConverted/

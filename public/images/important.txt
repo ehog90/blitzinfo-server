@@ -1,0 +1,5 @@
+This is the folder for flag image resources. They are restricted, but you can add your own.
+Folder names are numbers and they are indicationg the size of the flags. From 50 to 100 increasing by 50.
+
+The files should be named after the ISO 3166 standard.
+Example: public/images/flagsConverted/webp/100/al-01.webp (50 px flag image for Albania)

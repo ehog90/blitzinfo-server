@@ -35,7 +35,7 @@ class Logger implements ILogger {
         }
     }
 
-    private async save(message: ILog): void {
+    private async save(message: ILog) {
         const logsSave = new mongo.LogsMongoModel(message);
         const logSaved = await logsSave.save();
         this.logs.onNext(logSaved);

@@ -1,7 +1,7 @@
 ﻿//Imports.
 import * as morgan from "morgan";
 import * as bodyParser from "body-parser";
-import * as mongoose from "mongoose";
+const mongoose = require('mongoose');
 import * as method_override from "method-override";
 import * as express from "express";
 import {lightningMapsWebSocket} from "./scripts/lightningMaps/lightningMaps";
@@ -27,13 +27,18 @@ import {config} from "./scripts/config";
 import {Entities} from "./scripts/interfaces/entities";
 import IServerError = Entities.IServerError;
 import {authTest, baseMiddleware} from "./scripts/rest/authentication-middleware";
+const mongooseExt = require('./scripts/mongo/mongoose-observable');
 
 // Set up mongoose
-(<any>mongoose).promise = global.Promise;
+
+mongoose.promise = global.Promise;
 mongoose.connect(config.mongoLink, (error, ins) => {
     if (error) {
         console.error(`Failed to connect to the database ${config.mongoLink}: ${error}`);
         process.exit(1);
+    }
+    else {
+        console.error(`Connected to mongoDb ${config.mongoLink}: ${error}`);
     }
 });
 

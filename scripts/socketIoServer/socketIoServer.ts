@@ -48,14 +48,10 @@ enum AlertTypes {
     County = "county"
 }
 
-
 export class SocketIoServer implements ISocketIoServer {
-    private databaseSaver: IDatabaseSaver;
     private socketIoServer: Server;
     private lastDataFromDatabase: Subject<IStroke>;
-    private portNumber: number;
     private httpServer: http.Server;
-    private locationUpdater: ILocationUpdater;
     private statUpdaterTimer: Observable<TimeInterval<number>>;
 
     public static STAT_HOURS: number = 24;
@@ -68,25 +64,26 @@ export class SocketIoServer implements ISocketIoServer {
     public static LAST_HOUR = 1000 * 60 * 60;
     public static LAST_DAY = 1000 * 60 * 60 * 24;
 
-
-    constructor(private logger: ILogger, databaseSaver: IDatabaseSaver, locationUpdater: ILocationUpdater, statRefreshTickInSeconds: number, portNumber: number) {
-        this.databaseSaver = databaseSaver;
-        this.portNumber = portNumber;
+    constructor(
+        private logger: ILogger,
+        private databaseSaver: IDatabaseSaver,
+        private locationUpdater: ILocationUpdater,
+        private statRefreshTickInSeconds: number,
+        private portNumber: number)
+    {
         this.lastDataFromDatabase = this.databaseSaver.lastSavedStroke;
-
         this.httpServer = http.createServer((req, res) => {
             res.writeHead(0x1A4);
             res.end();
         });
 
-        this.locationUpdater = locationUpdater;
         this.socketIoServer = io(this.httpServer);
         this.httpServer.listen(this.portNumber);
         this.httpServer.on("error", (errorMessage) => this.onServerError(errorMessage));
         this.socketIoServer.on('connection', connection => this.onConnectionRequest(connection));
         this.lastDataFromDatabase.subscribe(stroke => this.strokeReceived(stroke));
         this.logger.logs.subscribe(x => this.logsReceived(x));
-        this.statUpdaterTimer = Observable.timer(0, statRefreshTickInSeconds * 1000)
+        this.statUpdaterTimer = Observable.timer(0, this.statRefreshTickInSeconds * 1000)
             .timeInterval();
         this.statUpdaterTimer.subscribe(x => this.statUpdateTriggered());
     }

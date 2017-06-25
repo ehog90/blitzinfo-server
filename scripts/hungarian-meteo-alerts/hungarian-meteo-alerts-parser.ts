@@ -19,7 +19,7 @@ const htmlparser2 = require("htmlparser2");
  Az OMSZ meteorológiai figyelmeztetéseit érkeztető, és kezelő osztály.  Bizonyos időközönként ellenőrzi a riasztásokat, amint a met.hu oldalról tölt le, majd kezeli azokat.
  Elküldi a Socket.IO osztálynak is, hohy az esetleges kliensek fogadhassák azokat. Szükség esetén figyelmezteti az eszközöket is.
  */
-class MetHuParser {
+class HungarianMeteoAlertsParser {
 
     private timer: Observable<TimeInterval<number>>;
     private metHuData: IMetHuData;
@@ -97,10 +97,10 @@ class MetHuParser {
                     await strokeToInsert.save();
                     if (alertArea.type === "county") {
                         const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.countyName': alertArea.name});
-                        await MetHuParser.notify(results, alertArea);
+                        await HungarianMeteoAlertsParser.notify(results, alertArea);
                     } else {
                         const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.regionalUnitName': alertArea.name});
-                        await MetHuParser.notify(results, alertArea);
+                        await HungarianMeteoAlertsParser.notify(results, alertArea);
                     }
                 }
             });
@@ -156,7 +156,7 @@ class MetHuParser {
                                             }
                                         }
                                         if (alertElem.type === "text") {
-                                            alert.type = MetHuParser.getAlertCode(alertElem.data);
+                                            alert.type = HungarianMeteoAlertsParser.getAlertCode(alertElem.data);
                                             has = true;
                                         }
                                     });
@@ -219,13 +219,13 @@ class MetHuParser {
     private async onTimerTick() {
 
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading county data`, false);
-        let countyResponses = await Observable.fromArray(this.metHuData.counties).map(county => Observable.fromPromise(MetHuParser.downloadData(county, "county"))).merge(4).reduce((acc, value) => {
+        let countyResponses = await Observable.fromArray(this.metHuData.counties).map(county => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(county, "county"))).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All county data downloaded: ${countyResponses.length}`, false);
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading regional unit data`, false);
-        let ruResponses = await Observable.fromArray(this.metHuData.regionalUnits).map(ru => Observable.fromPromise(MetHuParser.downloadData(ru, "regionalUnit"))).merge(4).reduce((acc, value) => {
+        let ruResponses = await Observable.fromArray(this.metHuData.regionalUnits).map(ru => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(ru, "regionalUnit"))).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
@@ -241,4 +241,4 @@ class MetHuParser {
     }
 }
 
-export const metHuParser: Modules.IMetHuParser = new MetHuParser(logger, 90);
+export const metHuParser: Modules.IMetHuParser = new HungarianMeteoAlertsParser(logger, 90);

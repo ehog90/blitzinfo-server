@@ -7,7 +7,6 @@ import * as express from "express";
 import {lightningMapsWebSocket} from "./scripts/lightningMaps/lightningMaps";
 import {locationUpdater} from "./scripts/databaseSaver/locationUpdater";
 import {socketIoServer} from "./scripts/socketIoServer/socketIoServer";
-import {metHuParser} from "./scripts/metHuParser/metHuParserAsync";
 import {firebaseService} from "./scripts/firebase/firebaseService";
 import {logger} from "./scripts/logger/logger";
 import * as http from "http";
@@ -27,18 +26,19 @@ import {config} from "./scripts/config";
 import {Entities} from "./scripts/interfaces/entities";
 import IServerError = Entities.IServerError;
 import {authTest, baseMiddleware} from "./scripts/rest/authentication-middleware";
-const mongooseExt = require('./scripts/mongo/mongoose-observable');
+import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
+const mongooseExt = require('./scripts/mongo/mongoose-extensions');
 
 // Set up mongoose
 
 mongoose.promise = global.Promise;
-mongoose.connect(config.mongoLink, (error, ins) => {
+mongoose.connect(config.mongoLink, {poolSize: 12}, (error, ins) => {
     if (error) {
         console.error(`Failed to connect to the database ${config.mongoLink}: ${error}`);
         process.exit(1);
     }
     else {
-        console.error(`Connected to mongoDb ${config.mongoLink}: ${error}`);
+        console.error(`Mongoose connected to MongoDB:  ${config.mongoLink}}`);
     }
 });
 

@@ -1,11 +1,11 @@
 ﻿import * as Rx from "rx";
 import * as websocket from "websocket";
 import {logger} from "../logger/logger";
-import {config,initObject} from "../config";
-import* as _ from 'lodash';
+import {config, initObject} from "../config";
+import * as _ from "lodash";
 import {Modules} from "../interfaces/modules";
-import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
 import {Entities} from "../interfaces/entities";
+import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
 import ILightningMapsStroke = Entities.ILightningMapsStroke;
 import Subject = Rx.Subject;
 import IIdAndDate = Entities.IIdAndDate;
@@ -38,7 +38,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
 
     constructor(private logger: ILogger, timeoutInSec: number, url: string) {
         this.initializationObject = initObject;
-        this.initializationObject.t =Math.ceil(new Date().getTime() / 1000);
+        this.initializationObject.t = Math.ceil(new Date().getTime() / 1000);
         this.url = url;
         this.timeoutInSec = timeoutInSec;
         this.lastTimeWhenReceived = new Date().getTime();
@@ -208,11 +208,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                 }
 
             });
-
     }
-
-
 }
-
 export const lightningMapsWebSocket: ILightningMapsWebSocket = new
-    LightningMapsWebSocket(logger, 60, config.lightningMapsUrl);
+LightningMapsWebSocket(logger, 60, config.lightningMapsUrl);

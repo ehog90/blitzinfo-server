@@ -17,28 +17,23 @@ class StationResolver implements IStationResolver {
         this.timer = Observable.timer(0, StationResolver.tick)
             .timeInterval();
         this.timer.subscribe(() => this.stationUpdateRequested());
-        lightningMapsWebSocket.lastReceived.subscribe(stroke => {
-            if (stroke.sta) {
-                for (const key in stroke.sta) {
-                    if (stroke.sta.hasOwnProperty(key)) {
-                        const stationId: number = Number(key);
-                        const date = new Date(stroke.time);
-                        StationResolver.updateStationDetection(stationId, date);
-                    }
+        lightningMapsWebSocket.lastReceived.filter(stroke => !!stroke.sta).subscribe(stroke => {
+            for (const key in stroke.sta) {
+                if (stroke.sta.hasOwnProperty(key)) {
+                    const stationId: number = Number(key);
+                    const date = new Date(stroke.time);
+                    StationResolver.updateStationDetection(stationId, date);
                 }
             }
         })
     }
 
-    private static updateStationDetection(station: number, date: Date) {
-        StationsMongoModel.update({sId: station}, {
+    private static async updateStationDetection(station: number, date: Date): Promise<any> {
+        return StationsMongoModel.update({sId: station}, {
             "$inc": {detCnt: 1},
             lastSeen: date
-        }, {upsert: true}).exec(() => {
-
-        });
+        }, {upsert: true}).toPromise();
     }
-
 
     private timer: Observable<TimeInterval<number>>;
     private static tick = 1000 * 60 * 60 * 2;
@@ -49,17 +44,12 @@ class StationResolver implements IStationResolver {
 
     private async stationUpdateRequested() {
         const stationQueryResult = await Observable.fromArray(StationResolver.jsonUrls).map(url =>
-            Observable.defer(() => {
-                return Observable.fromPromise(json.getJsonAsync(`${url}&${Math.random() % 420}`,1500))
-                    .catch(() => Observable.return(null))
-                    .do(val => Observable.return(val))
-            })
-        ).merge(1).reduce((acc,value) => {
-            if (value != null) {
+            Observable.fromPromise(json.getJsonAsync(`${url}&${Math.random() % 420}`, 1500))
+                .catch(() => Observable.return(null)))
+            .merge(1).filter(result => !!result).reduce((acc, value) => {
                 acc.push(value.result);
-            }
-            return acc;
-        },[]).toPromise();
+                return acc;
+            }, []).toPromise();
 
         logger.sendNormalMessage(0, 0, "Stations", `Stations are downloaded`, false);
         const arrayResults: any[] = [];
@@ -73,44 +63,30 @@ class StationResolver implements IStationResolver {
         });
 
 
-
-        const alteredResults = await Observable.fromArray(arrayResults).map(x => Observable.defer(() => {
-                return Observable.fromPromise(StationsMongoModel.findOne({
-                    sId: x.sId,
-                    latLon: {"$ne": [x[1], x[0]]}
-                }, (err, result) => {
-                    if (result) {
-                        StationsMongoModel.update({
-                            sId: x.sId,
-                        }, {"$unset": {location: true}}).exec(updateResult => {
-                            return Observable.return(result);
-                        });
-                    } else {
-                        return Observable.return(null);
-                    }
-                }));
-            })
-        ).merge(4).reduce((acc,value) => {
+        const alteredResults = await Observable.fromArray(arrayResults).map(x =>
+            StationsMongoModel.findOne({
+                sId: x.sId,
+                latLon: {"$ne": [x[1], x[0]]}
+            }).toObservable().filter(y => !!y).map(result => StationsMongoModel.update({
+                sId: x.sId,
+            }, {"$unset": {location: true}}).toObservable())
+        ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
-        },[]).toPromise();
+        }, []).toPromise();
 
         logger.sendNormalMessage(0, 0, `Stations`, `Altered stations: ${_.compact(alteredResults).length}`, false);
 
-        const insertedStations = await Observable.fromArray(arrayResults).map(x =>
-            Observable.defer(() => {
-            return Observable.fromPromise(StationsMongoModel.update({sId: x.sId}, {
+        await Observable.fromArray(arrayResults).map(x =>
+            StationsMongoModel.update({sId: x.sId}, {
                 sId: x.sId,
                 name: x.c,
                 latLon: [x[1], x[0]]
-            }, {upsert: true}).exec((err, result) => {
-                return Observable.return(result);
-            }));
-        })).merge(4).reduce((acc,value) => {
+            }, {upsert: true}).toObservable()
+        ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
-        },[]).toPromise();
-
+        }, []).toPromise();
 
         const untouched = await StationsMongoModel.find({
             "$and": [
@@ -118,21 +94,21 @@ class StationResolver implements IStationResolver {
                 {location: {"$exists": false}}]
         });
 
-        const geoResultsWithData = await Observable.fromArray(untouched).flatMap(x => Observable.defer(() => {
-            return Observable.fromPromise(mongoReverseGeocoderAsync.getGeoInformation(x.latLon).then((location) => {
-                x.location = location;
-                return Observable.return(x);
-            }));
-        })).merge(4).reduce((acc,value) => {
+        const geoResultsWithData = await Observable.fromArray(untouched).map(x =>
+            Observable.fromPromise(mongoReverseGeocoderAsync.getGeoInformation(x.latLon)).do(location => x.location = location)
+        ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
-        },[]).toPromise();
-        const updatedStations = await Observable.fromArray(geoResultsWithData).map(station => Observable.defer(() => {
-            return Observable.fromPromise(StationsMongoModel.update({sId: station.sId}, {location: station.location}))
-        })).merge(4).reduce((acc,value) => {
-            acc.push(value);
-            return acc;
-        },[]).toPromise();
+        }, []).toPromise();
+
+
+        const updatedStations = await Observable.fromArray(geoResultsWithData)
+            .map(station =>
+                StationsMongoModel.update({sId: station.sId}, {location: station.location})
+                    .toObservable()).merge(4).reduce((acc, value) => {
+                acc.push(value);
+                return acc;
+            }, []).toPromise();
 
         logger.sendNormalMessage(0, 0, `Stations`, `Updated stations: ${updatedStations.length}`, false);
     }

@@ -134,14 +134,7 @@ export class SocketIoServer implements ISocketIoServer {
             mongo.AllStatMongoModel.findOne({ isYear: true, period: year.toString() }).toObservable().map(x => StatUtils.processStatResult(x.data)),
             mongo.MinStatMongoModel.find({ 'timeStart': { '$gt': new Date(new Date().getTime() - SocketIoServer.LAST_DAY) } }).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
             mongo.MinStatMongoModel.find({ 'timeStart': { '$gt': new Date(new Date().getTime() - SocketIoServer.LAST_HOUR) } }).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
-            Observable.defer(() => {
-                if (!request.areStatsAlreadyInitialized) {
-                    request.areStatsAlreadyInitialized = true;
-                    return mongo.TenminStatMongoModel.find({}).sort({ timeStart: -1 }).limit(SocketIoServer.STAT_HOURS * 6).toObservable().map(x => StatUtils.getFlatTenMinStatistics(x));
-                } else {
-                    return Observable.return([]);
-                }
-            })
+            mongo.TenminStatMongoModel.find({}).sort({ timeStart: -1 }).limit(SocketIoServer.STAT_HOURS * 6).toObservable().map(x => StatUtils.getFlatTenMinStatistics(x))
         ]).toPromise();
         request.emit(Rooms.StatsInit, statData);
     }

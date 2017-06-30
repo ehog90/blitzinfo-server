@@ -14,6 +14,7 @@ import IFcmBase = Entities.IFcmBase;
 import IMeteoAlert = Entities.IMeteoAlert;
 import IResult = Entities.IResult;
 import IMetHuEntityWithData = Entities.IMetHuEntityWithData;
+import HungarianAlertTypes = Entities.HungarianAlertTypes;
 const htmlparser2 = require("htmlparser2");
 /*
  Az OMSZ meteorológiai figyelmeztetéseit érkeztető, és kezelő osztály.  Bizonyos időközönként ellenőrzi a riasztásokat, amint a met.hu oldalról tölt le, majd kezeli azokat.
@@ -33,7 +34,7 @@ class HungarianMeteoAlertsParser {
 
         const countyHtmlHandler = new htmlparser2.DefaultHandler((error, dom: any) => {
             if (!error) {
-                const data = this.domToAlertArea(dom, "county");
+                const data = this.domToAlertArea(dom, HungarianAlertTypes.County);
                 this.save(data);
             }
             else {
@@ -43,7 +44,7 @@ class HungarianMeteoAlertsParser {
 
         const regionalUnitHtmlHandler = new htmlparser2.DefaultHandler((error, dom: any) => {
             if (!error) {
-                let data = this.domToAlertArea(dom, "regionalUnit");
+                let data = this.domToAlertArea(dom, HungarianAlertTypes.RegionalUnit);
                 this.save(data);
             }
             else {
@@ -95,7 +96,7 @@ class HungarianMeteoAlertsParser {
                     });
 
                     await strokeToInsert.save();
-                    if (alertArea.type === "county") {
+                    if (alertArea.type === HungarianAlertTypes.County ) {
                         const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.countyName': alertArea.name});
                         await HungarianMeteoAlertsParser.notify(results, alertArea);
                     } else {
@@ -123,7 +124,7 @@ class HungarianMeteoAlertsParser {
         }
     }
 
-    private domToAlertArea(dom: any, areaType: "regionalUnit" | "county"): IAlertArea {
+    private domToAlertArea(dom: any, areaType: HungarianAlertTypes): IAlertArea {
         try {
             const data: IAlertArea = {
                 name: dom[1].children[1].children[0].children[0].data,
@@ -177,8 +178,8 @@ class HungarianMeteoAlertsParser {
         }
     }
 
-    private static async downloadData(code: number, type: "regionalUnit" | "county"): Promise<IResult<IMetHuEntityWithData>> {
-        const linkType = type === "county" ? "wbhx" : "wahx";
+    private static async downloadData(code: number, type: HungarianAlertTypes): Promise<IResult<IMetHuEntityWithData>> {
+        const linkType = type === HungarianAlertTypes.County ? "wbhx" : "wahx";
         const rawData = await getAnyAsync(`http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`, 15000);
         if (rawData.error) {
             return Promise.resolve({error: rawData.error, result: null});
@@ -187,7 +188,7 @@ class HungarianMeteoAlertsParser {
     }
 
     private async parseData(parser: any, entity: IMetHuEntityWithData): Promise<any> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             parser.parseComplete(entity.data, result => {
             });
             resolve(null);
@@ -219,13 +220,13 @@ class HungarianMeteoAlertsParser {
     private async onTimerTick() {
 
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading county data`, false);
-        let countyResponses = await Observable.fromArray(this.metHuData.counties).map(county => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(county, "county"))).merge(4).reduce((acc, value) => {
+        let countyResponses = await Observable.fromArray(this.metHuData.counties).map(county => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(county, HungarianAlertTypes.County))).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All county data downloaded: ${countyResponses.length}`, false);
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading regional unit data`, false);
-        let ruResponses = await Observable.fromArray(this.metHuData.regionalUnits).map(ru => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(ru, "regionalUnit"))).merge(4).reduce((acc, value) => {
+        let ruResponses = await Observable.fromArray(this.metHuData.regionalUnits).map(ru => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(ru, HungarianAlertTypes.RegionalUnit))).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();

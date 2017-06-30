@@ -17,10 +17,32 @@ export module Entities {
         id: string;
     }
 
+    export enum Environment {
+        Development = "DEV",
+        Production = "PROD"
+    }
+
+    export enum SocketIoConnectionTypes {
+        Log = 1,
+        Stat = 2,
+        Strokes = 3
+    }
+
+    export enum SocketIoRooms {
+        Strokes = "strokes",
+        Alerts = "alerts",
+        StrokesInit = "strokesInit",
+        Control = "control",
+        Logging = "log",
+        LoggingInit = "logInit",
+        Stats = "stats",
+        StatsInit = "statsInit",
+    }
+
     export interface IConfig {
         restPort: number;
         socketIOPort: number;
-        environment: "DEV" | "PROD";
+        environment: Environment;
         mongoLink: string;
         lightningMapsUrl: string;
     }
@@ -169,8 +191,13 @@ export module Entities {
         latLon: number[];
     }
 
+    export enum LocationUpdateSource {
+        SocketIO = "SOCKET.IO",
+        PeriodicQuery = "PERIODIC"
+    }
+
     export interface ILocationUpdateRequest {
-        updater: "SOCKET.IO" | "PERIODIC",
+        updater: LocationUpdateSource,
         deviceData: IDeviceUpdateRequestBody,
     }
 
@@ -203,6 +230,12 @@ export module Entities {
         dist?: number;
     }
 
+    export enum LogType {
+        Normal = "NORMAL",
+        Warning = "WARNING",
+        Error = "ERROR"
+    }
+
     export interface ILog {
         time: Date;
         canBeHidden: boolean;
@@ -212,14 +245,20 @@ export module Entities {
             fg: number;
         },
         messageParts: {
-            msgType: "NORMAL" | "WARNING" | "ERROR";
+            msgType: LogType;
             tag: string;
             msg: string;
         }
     }
+
+    export enum HungarianAlertTypes {
+        RegionalUnit = "regionalUnit",
+        County = "county"
+    }
+
     export interface IMetHuEntityWithData {
         data: string;
-        type: "regionalUnit" | "county";
+        type: HungarianAlertTypes;
         code: number;
     }
 
@@ -238,7 +277,7 @@ export module Entities {
     export interface IAlertArea {
         alerts: Array<IMeteoAlert>;
         name: string;
-        type: "county" | "regionalUnit";
+        type: HungarianAlertTypes;
     }
 
 
@@ -366,7 +405,7 @@ export module Entities {
         },
         messageParts:
         {
-            msgType: "NORMAL" | "WARNING" | "ERROR";
+            msgType: LogType;
             tag: string;
             msg: string;
         }
@@ -403,7 +442,7 @@ export module Entities {
 
     export interface IMetHuAlertDocument extends mongoose.Document {
         areaName: string,
-        areaType: "county" | "regionalUnit",
+        areaType: HungarianAlertTypes,
         timeFirst: Date,
         timeLast: Date,
         alertType: string,
@@ -441,14 +480,6 @@ export module Entities {
             {
                 type: string;
                 time: number;
-            }
-    }
-
-
-    export interface IKmlRequest {
-        params:
-            {
-                local?: string;
             }
     }
 
@@ -515,8 +546,7 @@ export module Entities {
     export interface StrokeSocket extends Socket {
         userInfo?: Entities.IInitializationMessage;
         allStatInfo?: Entities.ISocketIoAllStatRequest;
-        areStatsAlreadyInitialized?: boolean;
-        connectionType?: number[];
+        connectionType?: SocketIoConnectionTypes[];
     }
 }
 

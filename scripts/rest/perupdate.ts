@@ -5,6 +5,7 @@ import ILocationUpdater = Modules.ILocationUpdater;
 import {Entities} from "../interfaces/entities";
 import IUser = Entities.IUser;
 import IDeviceUpdateRequest = Entities.IDeviceUpdateRequest;
+import LocationUpdateSource = Entities.LocationUpdateSource;
 
 
 
@@ -22,7 +23,7 @@ export function periodicUpdate(req: IDeviceUpdateRequest, res: express.Response)
         UserAuthentication.authUser(req.body.se, (state: UserAuthentication.State, user: IUser) => {
             if (state === UserAuthentication.State.OK) {
 
-                locationUpdater.insertLastLocationSubject.onNext({ updater: "PERIODIC", deviceData: req.body });
+                locationUpdater.insertLastLocationSubject.onNext({ updater: LocationUpdateSource.PeriodicQuery, deviceData: req.body });
                 res.json({ state: 'PERIODIC_UPDATE_TRIGGERED: '+JSON.stringify(req.body) });
             } else {
                 res.json({ state: `AUTH_ERROR` });

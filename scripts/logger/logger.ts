@@ -9,6 +9,7 @@ import Subject = Rx.Subject;
 import {Entities} from "../interfaces/entities";
 import ILog = Entities.ILog;
 import ILogDocument = Entities.ILogDocument;
+import LogType = Entities.LogType;
 
 /*
 A rendszer eseményeinek kiírásáért, naplzásáért felelős osztály. A figyelmeztetések publikus metódusokon keresztül érkeznek be, amiket elment az adatbázisba,
@@ -25,11 +26,11 @@ class Logger implements ILogger {
     private toConsoleMessage(message: ILog) {
         if (!message.canBeHidden || !this.canHideSome) {
             const msg = clicolor.xterm(message.colors.fg).bgXterm(message.colors.bg);
-            if (message.messageParts.msgType === "NORMAL") {
+            if (message.messageParts.msgType === LogType.Normal) {
                 console.log(msg(`LOG [${moment(message.time).format("MM.DD HH:mm:ss:SSS")}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
-            } else if (message.messageParts.msgType === "WARNING") {
+            } else if (message.messageParts.msgType === LogType.Warning) {
                 console.warn(msg(`WARN [${moment(message.time).format("MM.DD HH:mm:ss:SSS")}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
-            } else if (message.messageParts.msgType === "ERROR") {
+            } else if (message.messageParts.msgType === LogType.Error) {
                 console.error(msg(`ERROR [${moment(message.time).format("MM.DD HH:mm:ss:SSS")}}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
             }
         }
@@ -55,7 +56,7 @@ class Logger implements ILogger {
             },
             messageParts:
             {
-                msgType: "NORMAL",
+                msgType: LogType.Normal,
                 tag: tag,
                 msg: message
             }
@@ -80,7 +81,7 @@ class Logger implements ILogger {
             },
             messageParts:
             {
-                msgType: "WARNING",
+                msgType: LogType.Warning,
                 tag: tag,
                 msg: message
             }
@@ -106,7 +107,7 @@ class Logger implements ILogger {
             },
             messageParts:
             {
-                msgType: "ERROR",
+                msgType: LogType.Error,
                 tag: tag,
                 msg: message
             }

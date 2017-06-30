@@ -151,7 +151,7 @@ export class SocketIoServer implements ISocketIoServer {
         });
         return true;
     }
-    private static async sendAlerts(connection: Socket, hungarianData: IHungarianRegionalInformation): Promise<IAlertArea> {
+    private static async sendAlerts(connection: StrokeSocket, hungarianData: IHungarianRegionalInformation): Promise<IAlertArea> {
         if (hungarianData.isInHungary) {
             const alerts = await mongo.AlertsMongoModel.find({ "areaType": HungarianAlertTypes.County, "areaName": hungarianData.regionalData.countyName, "timeLast": { "$eq": null } });
             const toAlerts = alerts.map(x => {

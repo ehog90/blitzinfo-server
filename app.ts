@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 import * as method_override from "method-override";
 import * as express from "express";
 import {lightningMapsWebSocket} from "./scripts/lightningMaps/lightningMaps";
-import {locationUpdater} from "./scripts/databaseSaver/locationUpdater";
 import {socketIoServer} from "./scripts/socketIoServer/socketIoServer";
 import {firebaseService} from "./scripts/firebase/firebaseService";
 import {logger} from "./scripts/logger/logger";
@@ -28,12 +27,11 @@ import IServerError = Entities.IServerError;
 import {authTest, authenticationMiddleware} from "./scripts/rest/authentication-middleware";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
 import {corsMiddleware} from "./scripts/rest/cors-middleware";
-const mongooseExt = require('./scripts/mongo/mongoose-extensions');
-
+import {customMorganLogger} from "./scripts/rest/morgan-logger";
+require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
-
 mongoose.promise = global.Promise;
-mongoose.connect(config.mongoLink, {poolSize: 12}, (error, ins) => {
+mongoose.connect(config.mongoLink, {poolSize: 12}, (error) => {
     if (error) {
         console.error(`Failed to connect to the database ${config.mongoLink}: ${error}`);
         process.exit(1);
@@ -42,24 +40,9 @@ mongoose.connect(config.mongoLink, {poolSize: 12}, (error, ins) => {
         console.error(`Mongoose connected to MongoDB:  ${config.mongoLink}}`);
     }
 });
-
 //Express app settings
-
-
 const app = express();
-
-morgan.token('custom', (req, res) => {
-    if (res.statusCode === 500) {
-        logger.sendErrorMessage(0, 0, "Morgan HTTP Logging", `${req.method} Reguest on: ${req.url}, params: ${JSON.stringify(req.params)}, status code: ${res.statusCode}`, false);
-        ;
-    }
-    else if (res.statusCode >= 400) {
-        logger.sendWarningMessage(0, 0, "Morgan HTTP Logging", `${req.method} Reguest on: ${req.url}, params: ${JSON.stringify(req.params)}, status code: ${res.statusCode}`, false);
-    } else {
-        logger.sendNormalMessage(22, 255, "Morgan HTTP Logging", `${req.method} Reguest on: ${req.url}, params: ${JSON.stringify(req.params)}, status code: ${res.statusCode}`, false);
-    }
-    return ""
-});
+morgan.token('custom',customMorganLogger);
 app.set('view engine', 'jade');
 //noinspection TypeScriptValidateTypes
 app.use(morgan(':method :url :response-time :status :custom', {}));

@@ -3,14 +3,18 @@
  */
 import * as express from "express";
 import {UserAuthentication} from "../userAuth/userAuth";
+import {Entities} from "../interfaces/entities";
+import IAuthenticatedRequest = Entities.IAuthenticatedRequest;
 
-export async function baseMiddleware (req: express.Request, res: express.Response, next) {
+export async function authenticationMiddleware (req: IAuthenticatedRequest, res: express.Response, next) {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Content-Type', 'application/json');
+
     if (req.url.startsWith('/auth')) {
         try {
-            const authResults = await UserAuthentication.authUserAsync(req.body.se);
-            next()
+            const authData = {uid: req.header("X-BlitzInfo-User"), sid: req.header("X-BlitzInfo-Session")};
+            req.authContext = await UserAuthentication.authUserAsync(authData);
+            next();
         }
         catch (exc) {
             if (exc == UserAuthentication.State.NoUser) {

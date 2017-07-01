@@ -21,7 +21,7 @@ export async function flagImage(req: IFlagsRequest, res: express.Response) {
             sizeNewRounded = 1000;
         }
         let img = req.params.cc.toLowerCase();
-        const exists = fs.exists(`./public/images/flagsConverted/webp/${sizeNewRounded}/${img}-01.${format}`, exists => {
+        fs.exists(`./public/images/flagsConverted/webp/${sizeNewRounded}/${img}-01.${format}`, exists => {
             if (!exists) {
                 img = "xx";
             }

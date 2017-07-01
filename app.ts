@@ -25,7 +25,7 @@ import {stationResolver} from "./scripts/station-resolver/station-resolver";
 import {config} from "./scripts/config";
 import {Entities} from "./scripts/interfaces/entities";
 import IServerError = Entities.IServerError;
-import {authTest, baseMiddleware} from "./scripts/rest/authentication-middleware";
+import {authTest, authenticationMiddleware} from "./scripts/rest/authentication-middleware";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
 const mongooseExt = require('./scripts/mongo/mongoose-extensions');
 
@@ -71,11 +71,7 @@ app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
 });
-//app.use(baseMiddleware);
-
-perupdate.setLocationUpdater(locationUpdater);
-savedLocations.setLocationUpdater(locationUpdater);
-
+app.use(authenticationMiddleware);
 app.get('/', restWelcome.welcome);
 app.get('/auth/test', authTest);
 app.get('/stats/tenmin/:hours', restStats.tenminStats);
@@ -91,17 +87,11 @@ app.get('/stationsByCountry', stationsByCountry);
 app.get('/logs/:type/:time', logs.errors);
 app.get('/nearby/:lat,:lon', nearbyStrokes.nearbyStrokes);
 
-/*app.post('/auth/user-location-logs', userlogs.locationLogsForUser);
+app.post('/auth/user-location-logs', userlogs.locationLogsForUser);
 app.post('/auth/periodic-update', perupdate.periodicUpdate);
-app.post('/auth/saved-location', savedLocations.newLocationInstance);
-app.post('/auth/saved-locations', savedLocations.getLocationsForUser);
-app.delete('/auth/saved-location', savedLocations.removeLocationInstance);*/
-
-app.post('/userlogs', userlogs.locationLogsForUser);
-app.post('/periodic_update', perupdate.periodicUpdate);
-app.post('/savedLocations/newInstance', savedLocations.newLocationInstance);
-app.post('/savedLocations', savedLocations.getLocationsForUser);
-app.post('/savedLocations/removeInstance', savedLocations.removeLocationInstance);
+app.get('/auth/saved-locations', savedLocations.getLocationsForUser);
+app.post('/auth/saved-locations', savedLocations.newLocationInstance);
+app.delete('/auth/saved-locations/:locationId', savedLocations.removeLocationInstance);
 
 
 const server = http.createServer(app);

@@ -1,4 +1,5 @@
 ﻿import * as mongoose from "mongoose";
+import * as express from "express";
 
 export module Entities {
 
@@ -69,6 +70,11 @@ export module Entities {
     export interface IUserSession {
         uid: string;
         did?: string;
+        sid: string;
+    }
+
+    export interface IUserAuthenticationData {
+        uid: string
         sid: string;
     }
 
@@ -323,13 +329,12 @@ export module Entities {
         email: string;
         password: string;
     }
-    
-    
+
+
     export interface ISettlementDocument extends mongoose.Document {
         _id: mongoose.Types.ObjectId;
         properties: any,
-        geometry:
-        {
+        geometry: {
             type: string;
             coordinates: number[];
         }
@@ -339,11 +344,10 @@ export module Entities {
         _id: mongoose.Types.ObjectId;
         properties: any,
         tags: any;
-        geometry:
-            {
-                type: string;
-                coordinates: number[][][][];
-            }
+        geometry: {
+            type: string;
+            coordinates: number[][][][];
+        }
     }
 
 
@@ -356,7 +360,7 @@ export module Entities {
         logIns: Array<IUserLogInDocument>;
     }
 
-    export interface ISavedLocation extends mongoose.Document{
+    export interface ISavedLocation extends mongoose.Document {
         uid: mongoose.Types.ObjectId;
         latLon: number[];
         locationData: IGeoAddress;
@@ -403,15 +407,14 @@ export module Entities {
             bg: number;
             fg: number;
         },
-        messageParts:
-        {
+        messageParts: {
             msgType: LogType;
             tag: string;
             msg: string;
         }
     }
 
-    export interface IStationDocument extends mongoose.Document{
+    export interface IStationDocument extends mongoose.Document {
         latLon: number[];
         sId: number;
         name: string;
@@ -451,78 +454,41 @@ export module Entities {
         _id: string,
     }
 
-    export interface ILocationLogsRequest {
-        body:
-            {
-                se: IUserSession;
-            }
-    }
-
     export interface IFlagsRequest {
-        params:
-            {
-                format: string;
-                size: number;
-                cc: string;
-            }
+        params: {
+            format: string;
+            size: number;
+            cc: string;
+        }
     }
 
     export interface INearbyTequest {
-        params:
-            {
-                lat: number;
-                lon: number;
-            }
+        params: {
+            lat: number;
+            lon: number;
+        }
     }
 
     export interface IErrorRequest {
-        params:
-            {
-                type: string;
-                time: number;
-            }
-    }
-
-    export interface IDeviceUpdateRequest {
-        body: Entities.IDeviceUpdateRequestBody;
-    }
-
-    export interface IUserDataRequest {
-        body: Entities.IUserSession;
-    }
-
-    export interface INewSavedLocationInstance {
-        body: {
-            se: Entities.IUserSession;
-            latLon: number[];
-            name: string;
+        params: {
             type: string;
+            time: number;
         }
     }
-
-    export interface IRemoveSavedLocationInstance {
-        body: {
-            se: Entities.IUserSession;
-            savedLocationId: string;
-        }
-    }
-
     export interface IUserRegistrationRequest {
-        body:
-            {
-                uname: string;
-                email: string;
-                pass: string;
-                fullname: string;
-            }
+        body: {
+            uname: string;
+            email: string;
+            pass: string;
+            fullname: string;
+        }
     }
 
     export interface IUserLoginRequest {
-        body:
-            {
-                uname: string;
-                pass: string;
-            }
+        body: {
+            uname: string;
+            pass: string;
+        }
     }
 
     export interface IUserRegistrationResponse {
@@ -551,5 +517,40 @@ export module Entities {
         on(event: string | symbol | SocketIoRooms, listener: Function): this;
         emit(event: string | symbol | SocketIoRooms, ...args: any[]): boolean;
     }
+
+    export interface IAuthenticatedRequest extends express.Request {
+        authContext: IUserDocument;
+    }
+
+    export interface IDeviceUpdateRequest extends IAuthenticatedRequest {
+        body: Entities.IDeviceUpdateRequestBody;
+    }
+
+    export interface ILocationLogsRequest extends IAuthenticatedRequest {
+        body: {
+            se: IUserSession;
+        }
+    }
+    export interface INewSavedLocationInstance extends IAuthenticatedRequest {
+        body: {
+            se: Entities.IUserSession;
+            latLon: number[];
+            name: string;
+            type: string;
+        }
+    }
+
+    export interface IUserDataRequest extends IAuthenticatedRequest {
+        body: Entities.IUserSession;
+    }
+
+    export interface IRemoveSavedLocationInstance extends IAuthenticatedRequest {
+        body: {
+            se: Entities.IUserSession;
+            savedLocationId: string;
+        }
+    }
+
+
 }
 

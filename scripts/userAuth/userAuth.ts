@@ -1,44 +1,40 @@
 ﻿import * as mongo from "../mongo/mongoDbSchemas";
 import {Entities} from "../interfaces/entities";
-
-
+const mongoose = require('mongoose');
 /*
  Egy felhasználót hitelesít.
  */
 export module UserAuthentication {
     import IUserSession = Entities.IUserSession;
     import IUser = Entities.IUser;
+    import IUserAuthenticationData = Entities.IUserAuthenticationData;
+    import IUserDocument = Entities.IUserDocument;
+
     export enum State {
-        NoUser, Database, OK
+        NoUser, OK
     }
-
-    //TODO: Get rid of this.
-    export function authUser(userSession: IUserSession, callback: (error: State, userData: IUser) => void) {
-        mongo.UserMongoModel.findOne({
-            '_id': userSession.uid,
-            'logIns': {'$elemMatch': {'_id': userSession.sid}}
-        }).exec((userError, userResult) => {
-            if (userError) {
-                callback(State.Database, null);
-            }
-            else if (userResult == null) {
-                callback(State.NoUser, null);
-            } else {
-                callback(State.OK, userResult);
-            }
-        });
-    }
-
-    export async function authUserAsync(userSession: IUserSession): Promise<IUser> {
+    export async function authUserAsync(userSession: IUserSession | IUserAuthenticationData): Promise<IUserDocument> {
         try {
-            let userResult = await mongo.UserMongoModel.findOne({
-                '_id': userSession.uid,
-                'logIns': {'$elemMatch': {'_id': userSession.sid}}
-            });
-            if (!userResult) {
+            let userResult = <IUserDocument[]>await mongo.UserMongoModel.aggregate([
+                {
+                    $match: {
+                        '_id': new mongoose.mongo.ObjectId(userSession.uid),
+                        'logIns': {'$elemMatch': {'_id': new mongoose.mongo.ObjectId(userSession.sid)}}
+                    }
+                },
+                {
+                    $limit: 1
+                },
+                {
+                    $project: {
+                        "password": 0,
+                    }
+                }
+            ]);
+            if (userResult.length === 0) {
                 return Promise.reject(State.NoUser);
             }
-            return Promise.resolve(userResult);
+            return Promise.resolve(userResult[0]);
         }
         catch (error) {
             return Promise.reject(error);

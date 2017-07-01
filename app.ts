@@ -27,6 +27,7 @@ import {Entities} from "./scripts/interfaces/entities";
 import IServerError = Entities.IServerError;
 import {authTest, authenticationMiddleware} from "./scripts/rest/authentication-middleware";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
+import {corsMiddleware} from "./scripts/rest/cors-middleware";
 const mongooseExt = require('./scripts/mongo/mongoose-extensions');
 
 // Set up mongoose
@@ -65,12 +66,7 @@ app.use(morgan(':method :url :response-time :status :custom', {}));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(method_override());
-
-app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-});
+app.use(corsMiddleware);
 app.use(authenticationMiddleware);
 app.get('/', restWelcome.welcome);
 app.get('/auth/test', authTest);

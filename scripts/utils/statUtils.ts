@@ -1,32 +1,20 @@
-﻿import {Enumerable} from 'ix';
-import {Entities} from "../interfaces/entities";
-/*
-    Statisztikákat készíti elő a küldésre, megfelelő formátumúra alakítva azokat.
-*/
-
+﻿import {Entities} from "../interfaces/entities";
+import * as _ from "lodash";
 export module StatUtils {
     import IMinutelyStatDocument = Entities.IMinutelyStatDocument;
-    export function getFlatTenMinStatistics(result: Array<IMinutelyStatDocument>): any[] {
-        const arrayResult = [];
-        result.forEach(elem => {
-            let row: any = [elem.timeStart.getTime(), elem.all, []];
-            for (let country in elem.data) {
-                if (elem.data.hasOwnProperty(country)) {
-                    row[2].push([country, parseInt(elem.data[country])]);
-                }
-            }
-            row[2] = Enumerable.fromArray(row[2]).orderByDescending(x => x[1]).toArray();
-            arrayResult.push(row);
+    export function getFlatTenMinStatistics(result): any[] {
+        return result.map(elem => {
+            let countryStat = _(elem.data).toPairs().orderBy([x => x[1], x => x[0]], ['desc', 'asc']).value();
+            return [elem.timeStart.getTime(), elem.all, countryStat];
         });
-        return arrayResult;
     }
 
-    export function getFlatAllStatistics(results: any[]): any[][] {
+    export function getFlatAllStatistics(results: any): any[][] {
         const allCountryData: any = {};
         results.forEach(statElem => {
             for (let country in statElem.data) {
                 if (statElem.data.hasOwnProperty(country)) {
-                    if (allCountryData[country] == null) {
+                    if (!allCountryData[country]) {
                         allCountryData[country] = statElem.data[country];
                     } else {
                         allCountryData[country].c += statElem.data[country].c;
@@ -41,20 +29,9 @@ export module StatUtils {
     }
 
     export function processStatResult(result: any): any[][] {
-        let arrayResult = [];
-        for (let country in result) {
-            if (result.hasOwnProperty(country)) {
-                arrayResult.push([
-                    country,
-                    parseInt(result[country].c),
-                    parseInt(result[country].l),
-                    0
-                ]);
-            }
-        }
-        let allCount = Enumerable.fromArray(arrayResult).sum(x => x[1]);
-        arrayResult = Enumerable.fromArray(arrayResult).orderByDescending(x => x[1]).toArray();
-        arrayResult.forEach((elem, index) => {
+        const arrayResult = _(result).toPairs().map(x => [x[0], x[1]['c'], x[1]['l'], 0]).orderBy([x => x[1], x => x[0]], ['asc', 'asc']).value();
+        const allCount = _.sumBy(arrayResult, x => x[1]);
+        arrayResult.forEach(elem => {
             elem[3] = parseFloat(((elem[1] / allCount) * 100).toFixed(7));
         });
         return arrayResult;

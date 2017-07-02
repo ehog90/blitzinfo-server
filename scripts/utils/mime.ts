@@ -1,9 +1,4 @@
-﻿
-/*
-    Kiterjesztés - MIME-típus konvertáló.
-*/
-
-export function getMimeForExtension(extension: string): string {
+﻿export function getMimeForExtension(extension: string): string {
     extension = extension.toLowerCase();
     if (extension === 'png') {
         return 'image/png';
@@ -13,3 +8,4 @@ export function getMimeForExtension(extension: string): string {
     }
     return 'application/octet-stream';
 }
+

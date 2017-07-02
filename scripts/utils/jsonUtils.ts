@@ -1,8 +1,4 @@
 ﻿import {Entities} from "../interfaces/entities";
-/*
-    JSON-tömörítő függvények.
-*/
-
 export module JsonUtils {
 
     import IStroke = Entities.IStroke;
@@ -10,14 +6,9 @@ export module JsonUtils {
         return time.getTime() - time.getTime() % (10 * 60 * 1000);
     }
 
-    export function toTenminStatJson(stroke: IStroke): any[] {
-        return ([roundTime(stroke.time), stroke.locationData.cc]);
-    }
-
     export function toAllStatJson(stroke: IStroke): any[] {
         return ([stroke.time.getTime(), stroke.locationData.cc]);
     }
-
     export function flattenStroke(stroke: IStroke): any[] {
         return ([
             stroke._id,

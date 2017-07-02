@@ -10,21 +10,18 @@ export module StatUtils {
     }
 
     export function getFlatAllStatistics(results: any): any[][] {
-        const allCountryData: any = {};
-        results.forEach(statElem => {
-            for (let country in statElem.data) {
-                if (statElem.data.hasOwnProperty(country)) {
-                    if (!allCountryData[country]) {
-                        allCountryData[country] = statElem.data[country];
-                    } else {
-                        allCountryData[country].c += statElem.data[country].c;
-                        if (allCountryData[country].l < statElem.data[country].l) {
-                            allCountryData[country].l = statElem.data[country].l;
-                        }
-                    }
+        const allCountryData = _(results).flatMap(x => x.data).reduce((acc, curr) => {
+            return _.mergeWith(acc, curr, (obj, src) => {
+                if (!obj) {
+                    return src;
                 }
-            }
-        });
+                obj.c += src.c;
+                if (src.l > obj.l) {
+                    obj.l = src.l;
+                }
+                return obj;
+            })
+        }, {});
         return processStatResult(allCountryData);
     }
 

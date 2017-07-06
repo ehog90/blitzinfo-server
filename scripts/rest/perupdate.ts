@@ -9,6 +9,6 @@ import {locationUpdater} from "../databaseSaver/locationUpdater";
 
 
 export function periodicUpdate(req: IDeviceUpdateRequest, res: express.Response) {
-    locationUpdater.insertLastLocationSubject.onNext({ updater: LocationUpdateSource.PeriodicQuery, deviceData: req.body });
+    locationUpdater.insertLastLocationSubject.next({ updater: LocationUpdateSource.PeriodicQuery, deviceData: req.body });
     res.json({ state: 'PERIODIC_UPDATE_TRIGGERED: '+JSON.stringify(req.body) });
 }

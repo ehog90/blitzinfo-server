@@ -13,8 +13,8 @@ class CountryReverseGeocoderAsync implements ICountryReverseGeoCoderAsync {
     private whereWolfInstance: any;
 
     constructor() {
-        const countryDataTopoJson = JSON.parse(fs.readFileSync('./JSON/countryData.json', 'utf8'));
-        const seaDataGeoJson = JSON.parse(fs.readFileSync('./JSON/seaData.json', 'utf8'));
+        const countryDataTopoJson = JSON.parse(fs.readFileSync('./static-json-data/countryData.json', 'utf8'));
+        const seaDataGeoJson = JSON.parse(fs.readFileSync('./static-json-data/seaData.json', 'utf8'));
         this.whereWolfInstance = wherewolf();
         this.whereWolfInstance.add('cc', countryDataTopoJson);
         this.whereWolfInstance.add('sea', seaDataGeoJson);

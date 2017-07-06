@@ -1,17 +1,16 @@
-﻿import * as Rx from "rx";
-import * as geo from "../utils/geo";
+﻿import * as geo from "../utils/geo";
 import {mongoReverseGeocoderAsync} from "./mongoReverseGeocoderAsync";
 import {Modules} from "../interfaces/modules";
 import IReverseGeocoderService = Modules.IReverseGeoCoderService;
 import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
-import Subject = Rx.Subject;
 import {Entities} from "../interfaces/entities";
 import IStroke = Entities.IStroke;
 import IReverseGeocoderAsync = Modules.IReverseGeoCoderAsync;
 import ILightningMapsStroke = Entities.ILightningMapsStroke;
 import Observable = Rx.Observable;
 import {lightningMapsWebSocket} from "../lightningMaps/lightningMaps";
-const sunCalc: any = require("../../overridden_modules/suncalc");
+import {Subject} from "rxjs/Subject";
+const sunCalc: any = require("../../changed-modules/suncalc");
 
 class ReverseGeocoderService implements IReverseGeocoderService {
     private lightningMapsWebSocket: ILightningMapsWebSocket;
@@ -45,7 +44,7 @@ class ReverseGeocoderService implements IReverseGeocoderService {
             _id: null
         };
         geoCodedStroke.locationData = await this.reverseGeocoder.getGeoInformation([stroke.lon, stroke.lat]);
-        this.lastGeocodedStroke.onNext(geoCodedStroke);
+        this.lastGeocodedStroke.next(geoCodedStroke);
     }
 
     public  assignWebSocket(lightningMapsWebSocket: ILightningMapsWebSocket) {

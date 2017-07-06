@@ -2,6 +2,8 @@
  Az egyes osztályokhoz tartó interfészek publikus metódusainak leírásai.
  */
 import {Entities} from "./entities";
+import {Subject} from "rxjs/Subject";
+
 declare module Modules {
     import ILog = Entities.ILog;
     import ISocketInitialization = Entities.ISocketInitialization;
@@ -13,10 +15,9 @@ declare module Modules {
     import IGeoAddress = Entities.IGeoAddress;
     import IStroke = Entities.IStroke;
     import Observable = Rx.Observable;
-    import Subject = Rx.Subject;
 
     export interface ILogger {
-        logs: Rx.Subject<ILog>;
+        logs: Subject<ILog>;
         sendNormalMessage(bgColor: number, fgColor: number, tag: string, message: string, canBeHidden: boolean): void;
         sendWarningMessage(bgColor: number, fgColor: number, tag: string, message: string, canBeHidden: boolean): void;
         sendErrorMessage(bgColor: number, fgColor: number, tag: string, message: string, canBeHidden: boolean);
@@ -25,7 +26,7 @@ declare module Modules {
     export interface ILightningMapsWebSocket {
         timeoutInSec: number;
         initializationObject: ISocketInitialization;
-        strokeEventChannel: Rx.Subject<any>;
+        strokeEventChannel: Subject<any>;
         lastTimeWhenReceived: number;
         lastReceived: Subject<ILightningMapsStroke>;
         isStrokeCorrect(stroke: ILightningMapsStroke): boolean;

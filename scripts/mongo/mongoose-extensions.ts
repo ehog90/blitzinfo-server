@@ -1,9 +1,8 @@
 /**
  * Created by ehog on 2017. 06. 25..
  */
-import * as Rx from 'rx';
 
-import Observable = Rx.Observable;
+import {Observable} from "rxjs/Observable";
 export {}
 import {DocumentQuery, mquery} from 'mongoose'
 declare module 'mongoose' {

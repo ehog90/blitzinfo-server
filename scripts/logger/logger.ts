@@ -1,15 +1,14 @@
 ﻿import * as fs from 'fs';
 import * as clicolor from 'cli-color';
-import * as Rx from 'rx';
 import * as mongo from "../mongo/mongoDbSchemas";
 import * as moment from 'moment'
 import {Modules} from "../interfaces/modules";
 import ILogger = Modules.ILogger;
-import Subject = Rx.Subject;
 import {Entities} from "../interfaces/entities";
 import ILog = Entities.ILog;
 import ILogDocument = Entities.ILogDocument;
 import LogType = Entities.LogType;
+import {Subject} from "rxjs/Subject";
 
 /*
 A rendszer eseményeinek kiírásáért, naplzásáért felelős osztály. A figyelmeztetések publikus metódusokon keresztül érkeznek be, amiket elment az adatbázisba,
@@ -21,7 +20,7 @@ class Logger implements ILogger {
     public logs: Subject<ILog> = new Subject<ILog>();
     constructor(
         private canHideSome: boolean) {
-        this.xtermData = JSON.parse(fs.readFileSync('./JSON/xtermData.json', 'utf8'));
+        this.xtermData = JSON.parse(fs.readFileSync('./static-json-data/xtermData.json', 'utf8'));
     }
     private toConsoleMessage(message: ILog) {
         if (!message.canBeHidden || !this.canHideSome) {
@@ -39,7 +38,7 @@ class Logger implements ILogger {
     private async save(message: ILog) {
         const logsSave = new mongo.LogsMongoModel(message);
         const logSaved = await logsSave.save();
-        this.logs.onNext(logSaved);
+        this.logs.next(logSaved);
     }
     public sendNormalMessage(bgColor: number, fgColor: number, tag: string, message: string, canBeHidden: boolean): void {
         if (fgColor === 0) {

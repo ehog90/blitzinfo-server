@@ -1,24 +1,23 @@
-﻿import * as Rx from 'rx';
-import * as http from 'http';
-import * as geoUtils from '../utils/geo';
-import {JsonUtils} from '../utils/jsonUtils';
-import {StatUtils} from '../utils/statUtils';
-import * as io from 'socket.io';
+﻿import * as http from "http";
+import * as geoUtils from "../utils/geo";
+import {JsonUtils} from "../utils/jsonUtils";
+import {StatUtils} from "../utils/statUtils";
+import * as io from "socket.io";
 import * as mongo from "../mongo/mongoDbSchemas";
-import {Entities} from "../interfaces/entities"
-import { localeDatabase } from "../utils/localeDatabase";
-import { logger } from "../logger/logger";
-import { databaseSaver } from "../databaseSaver/databaseSaver"
-import { locationUpdater} from "../databaseSaver/locationUpdater"
-import {config } from "../config"
+import {Entities} from "../interfaces/entities";
+import {localeDatabase} from "../utils/localeDatabase";
+import {logger} from "../logger/logger";
+import {databaseSaver} from "../databaseSaver/databaseSaver";
+import {locationUpdater} from "../databaseSaver/locationUpdater";
+import {config} from "../config";
 import {Modules} from "../interfaces/modules";
+import {Subject} from "rxjs/Subject";
+import {Observable} from "rxjs/Rx";
+import {TimeInterval} from "rxjs/Rx";
 import ISocketIoServer = Modules.ISocketIoServer;
 import IDatabaseSaver = Modules.IDatabaseSaver;
-import Subject = Rx.Subject;
 import IStroke = Entities.IStroke;
 import ILocationUpdater = Modules.ILocationUpdater;
-import Observable = Rx.Observable;
-import TimeInterval = Rx.TimeInterval;
 import ILogger = Modules.ILogger;
 import IAllStatDocument = Entities.IAllStatDocument;
 import IMinutelyStatDocument = Entities.IMinutelyStatDocument;
@@ -47,13 +46,11 @@ export class SocketIoServer implements ISocketIoServer {
     public static LAST_HOUR = 1000 * 60 * 60;
     public static LAST_DAY = 1000 * 60 * 60 * 24;
 
-    constructor(
-        private logger: ILogger,
-        private databaseSaver: IDatabaseSaver,
-        private locationUpdater: ILocationUpdater,
-        private statRefreshTickInSeconds: number,
-        private portNumber: number)
-    {
+    constructor(private logger: ILogger,
+                private databaseSaver: IDatabaseSaver,
+                private locationUpdater: ILocationUpdater,
+                private statRefreshTickInSeconds: number,
+                private portNumber: number) {
         this.lastDataFromDatabase = this.databaseSaver.lastSavedStroke;
         this.httpServer = http.createServer((req, res) => {
             res.writeHead(0x1A4);
@@ -112,13 +109,19 @@ export class SocketIoServer implements ISocketIoServer {
         request.connectionType.push(SocketIoConnectionTypes.Stat);
 
         const year = new Date().getUTCFullYear();
-        const statData = await Observable.forkJoin([
-            mongo.AllStatMongoModel.findOne({ isYear: false, period: 'all' }).toObservable().map(x => StatUtils.processStatResult(x.data)),
-            mongo.AllStatMongoModel.findOne({ isYear: true, period: year.toString() }).toObservable().map(x => StatUtils.processStatResult(x.data)),
-            mongo.MinStatMongoModel.find({ 'timeStart': { '$gt': new Date(new Date().getTime() - SocketIoServer.LAST_DAY) } }).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
-            mongo.MinStatMongoModel.find({ 'timeStart': { '$gt': new Date(new Date().getTime() - SocketIoServer.LAST_HOUR) } }).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
-            mongo.TenminStatMongoModel.find({}).sort({ timeStart: -1 }).limit(SocketIoServer.STAT_HOURS * 6).toObservable().map(x => StatUtils.getFlatTenMinStatistics(x))
-        ]).toPromise();
+        const statData = await Observable.forkJoin(
+            mongo.AllStatMongoModel.findOne({
+                isYear: false,
+                period: 'all'
+            }).toObservable().map(x => StatUtils.processStatResult(x.data)),
+            mongo.AllStatMongoModel.findOne({
+                isYear: true,
+                period: year.toString()
+            }).toObservable().map(x => StatUtils.processStatResult(x.data)),
+            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_DAY)}}).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
+            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_HOUR)}}).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
+            mongo.TenminStatMongoModel.find({}).sort({timeStart: -1}).limit(SocketIoServer.STAT_HOURS * 6).toObservable().map(x => StatUtils.getFlatTenMinStatistics(x))
+        ).toPromise();
         request.emit(SocketIoRooms.StatsInit, statData);
     }
 
@@ -133,10 +136,11 @@ export class SocketIoServer implements ISocketIoServer {
 
     private onLogRequestReceived(connection: StrokeSocket) {
         connection.connectionType.push(SocketIoConnectionTypes.Log);
-        mongo.LogsMongoModel.find({ time: { '$gt': new Date(new Date().getTime() - 1000 * 60 * 10) } }).sort({ time: -1 }).limit(10000).exec((error, results: Array<ILog>) => {
+        mongo.LogsMongoModel.find({time: {'$gt': new Date(new Date().getTime() - 1000 * 60 * 10)}}).sort({time: -1}).limit(10000).exec((error, results: Array<ILog>) => {
             connection.emit(SocketIoRooms.LoggingInit, results);
         });
     }
+
     private validateInitializationMessage(initializationMessage: IInitializationMessage): boolean {
         if (initializationMessage.latLon == undefined || initializationMessage.latLon.length !== 2 || isNaN(initializationMessage.latLon[0]) || isNaN(initializationMessage.latLon[0])) {
             return false;
@@ -151,9 +155,14 @@ export class SocketIoServer implements ISocketIoServer {
         });
         return true;
     }
+
     private static async sendAlerts(connection: StrokeSocket, hungarianData: IHungarianRegionalInformation): Promise<IAlertArea> {
         if (hungarianData.isInHungary) {
-            const alerts = await mongo.AlertsMongoModel.find({ "areaType": HungarianAlertTypes.County, "areaName": hungarianData.regionalData.countyName, "timeLast": { "$eq": null } });
+            const alerts = await mongo.AlertsMongoModel.find({
+                "areaType": HungarianAlertTypes.County,
+                "areaName": hungarianData.regionalData.countyName,
+                "timeLast": {"$eq": null}
+            });
             const toAlerts = alerts.map(x => {
                 return ({
                     type: x.alertType,
@@ -171,18 +180,21 @@ export class SocketIoServer implements ISocketIoServer {
             return Promise.resolve(alertsObject);
         }
     }
+
     private static getLocaleName(stroke: IStroke, locale: string): IStroke {
         if (locale && localeDatabase[locale] != undefined && stroke.locationData[`sm_${locale}`]) {
             stroke.locationData.smDef = stroke.locationData[`sm_${locale}`];
         }
         return stroke;
     }
+
     private getLocaleNames(strokes: Array<IStroke>, locale: string): Array<IStroke> {
         if (locale && localeDatabase[locale] != undefined) {
-            strokes.map(stroke =>  SocketIoServer.getLocaleName(stroke, locale));
+            strokes.map(stroke => SocketIoServer.getLocaleName(stroke, locale));
         }
         return strokes;
     }
+
     private async onStrokesInitReceived(connection: StrokeSocket, message: any) {
         try {
             connection.connectionType.push(SocketIoConnectionTypes.Strokes);
@@ -220,7 +232,7 @@ export class SocketIoServer implements ISocketIoServer {
                         {
                             '$geoNear': {
                                 limit: SocketIoServer.MAXIMAL_DATA,
-                                near: { type: "Point", coordinates: connection.userInfo.latLon },
+                                near: {type: "Point", coordinates: connection.userInfo.latLon},
                                 distanceField: "dist",
                                 includeLocs: "latLon",
                                 spherical: true
@@ -234,7 +246,7 @@ export class SocketIoServer implements ISocketIoServer {
                                 sunData: 1,
                                 locationData: 1,
                                 dist: {
-                                    '$divide': ['$dist',1000]
+                                    '$divide': ['$dist', 1000]
                                 }
                             }
                         }
@@ -249,7 +261,7 @@ export class SocketIoServer implements ISocketIoServer {
 
                         if (connection.userInfo.dtr === 0) {
                             connection.userInfo.ad = geoUtils.getDistance(connection.userInfo.latLon, result[result.length - 1].latLon);
-                            connection.emit(SocketIoRooms.Control, { distance: connection.userInfo.ad });
+                            connection.emit(SocketIoRooms.Control, {distance: connection.userInfo.ad});
                         }
 
 
@@ -278,7 +290,10 @@ export class SocketIoServer implements ISocketIoServer {
                         };
                     const hungarianData = await this.locationUpdater.getHungarianData(connection.userInfo.latLon);
                     if (connection.userInfo.se && canSaveLocation) {
-                        this.locationUpdater.insertLastLocationSubject.onNext({ updater: LocationUpdateSource.SocketIO, deviceData: lastData });
+                        this.locationUpdater.insertLastLocationSubject.next({
+                            updater: LocationUpdateSource.SocketIO,
+                            deviceData: lastData
+                        });
                     }
                     await SocketIoServer.sendAlerts(connection, hungarianData);
                 }
@@ -291,6 +306,7 @@ export class SocketIoServer implements ISocketIoServer {
         catch (exc) {
         }
     }
+
     private strokeReceived(stroke: IStroke): void {
         this.getAllSockets().forEach(connection => {
             if (connection.connectionType.indexOf(SocketIoConnectionTypes.Strokes) !== -1) {
@@ -327,4 +343,4 @@ export class SocketIoServer implements ISocketIoServer {
     }
 }
 export const socketIoServer: ISocketIoServer = new
-    SocketIoServer(logger, databaseSaver, locationUpdater, 60, config.socketIOPort);
+SocketIoServer(logger, databaseSaver, locationUpdater, 60, config.socketIOPort);

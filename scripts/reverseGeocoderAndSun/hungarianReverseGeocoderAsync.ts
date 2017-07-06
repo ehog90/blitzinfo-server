@@ -12,8 +12,8 @@ class HungarianRegionalReverseGeocoder implements IHungarianRegionalReverseGeoco
     private static hungarianBoundingBox: number[][] = [[16.1138867, 45.737128], [22.8974573, 48.585257]];
     private whereWolfInstance: any;
     constructor() {
-        const countyData = JSON.parse(fs.readFileSync('./JSON/huCounties.json', 'utf8'));
-        const regionalUnitData = JSON.parse(fs.readFileSync('./JSON/huRegionalUnits.json', 'utf8'));
+        const countyData = JSON.parse(fs.readFileSync('./static-json-data/huCounties.json', 'utf8'));
+        const regionalUnitData = JSON.parse(fs.readFileSync('./static-json-data/huRegionalUnits.json', 'utf8'));
         this.whereWolfInstance = wherewolf();
         this.whereWolfInstance.add('county', countyData);
         this.whereWolfInstance.add('regionalUnit', regionalUnitData);

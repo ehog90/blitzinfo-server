@@ -1,5 +1,6 @@
 ﻿import {Entities} from "../interfaces/entities";
-import * as _ from "lodash";
+const _ : any = require("lodash");
+
 export module StatUtils {
     import IMinutelyStatDocument = Entities.IMinutelyStatDocument;
     export function getFlatTenMinStatistics(result): any[] {

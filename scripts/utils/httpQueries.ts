@@ -1,10 +1,9 @@
 ﻿import * as https from "https";
 import {RequestOptions} from "https";
-import * as Rx from "rx";
 import {Entities} from "../interfaces/entities";
 const request = require("request");
-import Observable = Rx.Observable;
 import IResult = Entities.IResult;
+import {Observable} from "rxjs/Observable";
 
 export async function getJsonAsync(url: string, timeout: number): Promise<IResult<any>> {
     return <Promise<IResult<any>>>new Promise((resolve, reject) => {
@@ -50,7 +49,7 @@ export function getJson(url, callback: (error: any, result: any) => void) {
     });
 }
 export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): Observable<T> {
-    return Observable.create<T>(observer => {
+    return Observable.create(observer => {
         const request: any = https.request(opts,
             res => {
                 let d;

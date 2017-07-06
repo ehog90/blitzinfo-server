@@ -1,13 +1,14 @@
-﻿import * as geoUtils from '../utils/geo';
+﻿import * as geoUtils from "../utils/geo";
 import * as mongo from "../mongo/mongoDbSchemas";
 import {logger} from "../logger/logger";
 import {huRegReverseGeocoder} from "../reverseGeocoderAndSun/hungarianReverseGeocoderAsync";
 import * as grg from "../reverseGeocoderAndSun/googleReverseGeocoderAsync";
-import * as Rx from 'rx';
-import * as _ from "lodash"
+import * as _ from "lodash";
 import {Modules} from "../interfaces/modules";
-import ILocationUpdater = Modules.ILocationUpdater;
 import {Entities} from "../interfaces/entities";
+import {Subject} from "rxjs/Subject";
+import {Observable} from "rxjs/Observable";
+import ILocationUpdater = Modules.ILocationUpdater;
 import ILocationUpdateRequest = Entities.ILocationUpdateRequest;
 import ILogger = Modules.ILogger;
 import IReverseGeocoderAsync = Modules.IReverseGeoCoderAsync;
@@ -18,8 +19,7 @@ import IDeviceUpdateRequestBody = Entities.IDeviceUpdateRequestBody;
 import IDeviceLocationLog = Entities.IDeviceLocationLog;
 import ILocationLogResult = Entities.ILocationLogResult;
 import IDeviceLocationRecent = Entities.IDeviceLocationRecent;
-import Subject = Rx.Subject;
-import Observable = Rx.Observable;
+import LocationUpdateSource = Entities.LocationUpdateSource;
 
 /* A felhasználói helyzeteket kezelő osztály.
  A megadott felhasználói adatok szerint frissíti az eszköz helyzetét a történeti, és legutolsó helyadatok között.
@@ -34,7 +34,7 @@ export class LocationUpdater implements ILocationUpdater {
                 private hungarianRegionalReverseGeocoder: IHungarianRegionalReverseGeocoder) {
         this.insertLastLocationSubject = new Subject<ILocationUpdateRequest>();
         this.insertLastLocationSubject
-            .buffer(() => Observable.timer(5000))
+            .buffer(Observable.interval(5000))
             .subscribe(x => this.processLocationBuffer(x));
 
     }
@@ -63,11 +63,10 @@ export class LocationUpdater implements ILocationUpdater {
 
     private async processLocationBuffer(items: ILocationUpdateRequest[]): Promise<any> {
         if (items.length > 0) {
-             _.reverse(items);
+            _.reverse(items);
             let processed: string[] = [];
 
-            for (let item of items)
-            {
+            for (let item of items) {
                 if (processed.indexOf(item.deviceData.se.did) === -1) {
                     processed.push(item.deviceData.se.did);
                     try {
@@ -79,8 +78,7 @@ export class LocationUpdater implements ILocationUpdater {
                                 `${JSON.stringify(item)} ${JSON.stringify(logResult)}`,
                                 false);
                     }
-                    catch (error)
-                    {
+                    catch (error) {
                         this.logger.sendErrorMessage(0, 0, "Location updater", error.toString(), false);
                     }
 
@@ -96,9 +94,9 @@ export class LocationUpdater implements ILocationUpdater {
 
     }
 
-    private static async saveNewLogToDatabase(updater: string,
-                                        deviceData: IDeviceUpdateRequestBody,
-                                        geocodingResult: IGeocodingResult) {
+    private static async saveNewLogToDatabase(updater: LocationUpdateSource,
+                                              deviceData: IDeviceUpdateRequestBody,
+                                              geocodingResult: IGeocodingResult) {
         let dataToSaveLog: IDeviceLocationLog = {
             num: 1,
             updater: updater,
@@ -125,9 +123,9 @@ export class LocationUpdater implements ILocationUpdater {
         }
     }
 
-    private async saveRecentToDatabase(updater: "SOCKET.IO" | "PERIODIC",
-                                       deviceData: IDeviceUpdateRequestBody,
-                                       logResult: ILocationLogResult): Promise<IDeviceLocationRecent> {
+    private static async saveRecentToDatabase(updater: LocationUpdateSource,
+                                              deviceData: IDeviceUpdateRequestBody,
+                                              logResult: ILocationLogResult): Promise<IDeviceLocationRecent> {
 
         let dataToSaveRecent: IDeviceLocationRecent = {
             num: 1,
@@ -158,19 +156,18 @@ export class LocationUpdater implements ILocationUpdater {
 
     }
 
-    private async insertLastLocationToDatabaseAndUpdate(updater: "SOCKET.IO" | "PERIODIC",
-                                                        deviceData: IDeviceUpdateRequestBody): Promise<IDeviceLocationRecent>{
+    private async insertLastLocationToDatabaseAndUpdate(updater: LocationUpdateSource,
+                                                        deviceData: IDeviceUpdateRequestBody): Promise<IDeviceLocationRecent> {
         try {
 
             let logResult = await this.insertLastLocationToDatabase(updater, deviceData);
             let existingData = await mongo.LocationRecentMongoModel.findOne({'did': {'$eq': deviceData.se.did}});
             if (!existingData) {
-                let locationRecent = this.saveRecentToDatabase(updater, deviceData, logResult);
+                let locationRecent = LocationUpdater.saveRecentToDatabase(updater, deviceData, logResult);
                 return Promise.resolve(locationRecent);
             }
-            else
-            {
-                let updatedData = await mongo.LocationRecentMongoModel.update(
+            else {
+                await mongo.LocationRecentMongoModel.update(
                     {'did': {'$eq': deviceData.se.did}},
                     {
                         '$inc': {
@@ -193,7 +190,7 @@ export class LocationUpdater implements ILocationUpdater {
 
     }
 
-    private async insertLastLocationToDatabase(updater: string, deviceData: IDeviceUpdateRequestBody): Promise<ILocationLogResult> {
+    private async insertLastLocationToDatabase(updater: LocationUpdateSource, deviceData: IDeviceUpdateRequestBody): Promise<ILocationLogResult> {
         try {
             let existingData = await mongo.LocationLogMongoModel.findOne({'did': {'$eq': deviceData.se.did}}).sort({'timeLast': -1});
             if (!existingData) {
@@ -202,7 +199,7 @@ export class LocationUpdater implements ILocationUpdater {
                 return Promise.resolve({geocodingResult: locationData, id: saved._id.toString()});
             }
             else if (geoUtils.getDistance(deviceData.latLon, existingData.latLon) < 0.1) {
-                let updateStatus = await mongo.LocationLogMongoModel.update({_id: existingData._id},
+                await mongo.LocationLogMongoModel.update({_id: existingData._id},
                     {
                         '$inc': {num: 1, accsum: deviceData.acc},
                         'timeLast': new Date().getTime(),
@@ -228,4 +225,4 @@ export class LocationUpdater implements ILocationUpdater {
     }
 }
 export const locationUpdater: ILocationUpdater = new
-    LocationUpdater(logger, grg.googleReverseGeoCoder, huRegReverseGeocoder);
+LocationUpdater(logger, grg.googleReverseGeoCoder, huRegReverseGeocoder);

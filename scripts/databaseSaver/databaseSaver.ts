@@ -1,17 +1,17 @@
-﻿import * as Rx from "rx";
-import * as mongo from "../mongo/mongoDbSchemas";
+﻿import * as mongo from "../mongo/mongoDbSchemas";
 import {logger} from "../logger/logger";
 import {reverseGeocoderService} from "../reverseGeocoderAndSun/reverseGeocoderService";
 import {logMongoErrors} from "../mongo-error-handling/mongo-error-handling";
 import {Modules} from "../interfaces/modules";
 import IDatabaseSaver = Modules.IDatabaseSaver;
 import {Entities} from "../interfaces/entities";
-import Subject = Rx.Subject;
 import IReverseGeocoderService = Modules.IReverseGeoCoderService;
-import Observable = Rx.Observable;
-import TimeInterval = Rx.TimeInterval;
-import IDisposable = Rx.IDisposable;
 import ILogger = Modules.ILogger;
+import {Subject} from "rxjs/Subject";
+import {Observable} from "rxjs/Rx";
+import {TimeInterval} from "rxjs/Rx";
+import IDisposable = Rx.IDisposable;
+import {Subscription} from "rxjs/Subscription";
 
 /* Adatbázisba mentő osztály.
  A bemeneti adatok aszinkron módon érkeznek a geokódoló osztályból (reverseGeocoder.lastGeocodedStroke)
@@ -21,7 +21,7 @@ class DatabaseSaver implements IDatabaseSaver {
     public isDupeChecking: boolean;
     private serverEventChannel: Subject<any>;
     private dupeCheckerTimeoutTimer: Observable<TimeInterval<number>>;
-    private timerSubscription: IDisposable;
+    private timerSubscription: Subscription;
     public databaseDupeCheckingTimeout: number;
 
     constructor(private logger: ILogger,
@@ -35,7 +35,7 @@ class DatabaseSaver implements IDatabaseSaver {
     private setUpGeocoder(reverseGeoCoder: IReverseGeocoderService) {
         this.serverEventChannel = reverseGeoCoder.serverEventChannel;
         this.serverEventChannel.filter(x => x === 0)
-            .subscribe(event => this.onEventReceived(event));
+            .subscribe(event => this.onEventReceived());
         this.lastSavedStroke = reverseGeoCoder.lastGeocodedStroke;
         this.reverseGeoCoder.lastGeocodedStroke.subscribe(x => this.strokeGeoCoded(x));
     }
@@ -121,7 +121,7 @@ class DatabaseSaver implements IDatabaseSaver {
         catch (error) {
 
         }
-        this.lastSavedStroke.onNext(savedStroke);
+        this.lastSavedStroke.next(savedStroke);
         return Promise.resolve();
     }
 
@@ -142,7 +142,7 @@ class DatabaseSaver implements IDatabaseSaver {
         this.initializeTimer();
     }
 
-    private onEventReceived(event: any): void {
+    private onEventReceived(): void {
         this.enableDupeChecking();
     }
 }

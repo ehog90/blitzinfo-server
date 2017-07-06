@@ -1,5 +1,4 @@
-﻿import * as Rx from "rx";
-import * as websocket from "websocket";
+﻿import * as websocket from "websocket";
 import {logger} from "../logger/logger";
 import {config, initObject} from "../config";
 import * as _ from "lodash";
@@ -7,14 +6,14 @@ import {Modules} from "../interfaces/modules";
 import {Entities} from "../interfaces/entities";
 import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
 import ILightningMapsStroke = Entities.ILightningMapsStroke;
-import Subject = Rx.Subject;
 import IIdAndDate = Entities.IIdAndDate;
-import Observable = Rx.Observable;
-import TimeInterval = Rx.TimeInterval;
-import IDisposable = Rx.IDisposable;
 import ILogger = Modules.ILogger;
 import ILightningMapsStrokeBulk = Entities.ILightningMapsStrokeBulk;
 import ISocketInitialization = Entities.ISocketInitialization;
+import {Subject} from "rxjs/Subject";
+import {Observable,TimeInterval} from "rxjs/Rx";
+import IDisposable = Rx.IDisposable;
+import {Subscription} from "rxjs/Subscription";
 /*
  A LightningMaps-kapcsolatért felelős osztály. a villámok aszinkron módon érkeznek a távoli szerverről, és továbbítja azt az adatbázisba mentésért felelős osztálynak.
  */
@@ -32,8 +31,8 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
     private timeoutCheckerTimer: Observable<TimeInterval<number>>;
     private reconnectTimer: Observable<TimeInterval<number>>;
     private duplicateDatas: Subject<ILightningMapsStroke>;
-    private timerSubscription: IDisposable;
-    private reconnectSubscription: IDisposable;
+    private timerSubscription: Subscription;
+    private reconnectSubscription: Subscription;
     private url: string;
 
     constructor(private logger: ILogger, timeoutInSec: number, url: string) {
@@ -82,7 +81,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                 this.logger.sendNormalMessage(165, 11, 'Lightning Maps Websocket', 'Websocket disconnected.', false);
             } catch (exc) {
             } finally {
-                this.strokeEventChannel.onNext(0);
+                this.strokeEventChannel.next(0);
                 this.logger.sendWarningMessage(165,
                     11,
                     'Lightning Maps Websocket',
@@ -177,10 +176,10 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                                                 `Malformed stroke: [ID=${x.id}, lat=${x.lat}, lon=${x.lon}]`,
                                                 true);
                                     } else if (this.isStrokeAlreadyProcessed(x)) {
-                                        this.duplicateDatas.onNext(x);
+                                        this.duplicateDatas.next(x);
                                     } else {
                                         this.processedStrokes.unshift({id: x.id, time: x.time});
-                                        this.lastReceived.onNext(x);
+                                        this.lastReceived.next(x);
                                         this.lastStroke = x;
                                         this.lastTimeWhenReceived = new Date().getTime();
                                     }
@@ -198,7 +197,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                     });
                 try {
                     this.blitzortungConnection.sendUTF(JSON.stringify(this.initializationObject));
-                    this.strokeEventChannel.onNext(0);
+                    this.strokeEventChannel.next(0);
                 } catch (exc) {
                     this.logger.sendErrorMessage(0,
                         0,

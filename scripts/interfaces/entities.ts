@@ -211,7 +211,7 @@ export module Entities {
     export interface IDeviceLocationBase {
         _id?: any,
         num: number,
-        updater: string;
+        updater: LocationUpdateSource | string;
         timeFirst: Date;
         timeLast: Date;
         latLon: number[];

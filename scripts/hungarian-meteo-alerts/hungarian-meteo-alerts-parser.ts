@@ -1,5 +1,4 @@
-﻿import {Observable, TimeInterval} from "rx";
-import * as fs from "fs";
+﻿import * as fs from "fs";
 import * as fcmUtils from "../utils/firebase";
 import {getAnyAsync, customHttpRequestAsync} from "../utils/httpQueries";
 import * as mongo from "../mongo/mongoDbSchemas";
@@ -15,6 +14,8 @@ import IMeteoAlert = Entities.IMeteoAlert;
 import IResult = Entities.IResult;
 import IMetHuEntityWithData = Entities.IMetHuEntityWithData;
 import HungarianAlertTypes = Entities.HungarianAlertTypes;
+import {Observable} from "rxjs/Observable";
+import {TimeInterval} from "rxjs/Rx";
 const htmlparser2 = require("htmlparser2");
 /*
  Az OMSZ meteorológiai figyelmeztetéseit érkeztető, és kezelő osztály.  Bizonyos időközönként ellenőrzi a riasztásokat, amint a met.hu oldalról tölt le, majd kezeli azokat.
@@ -28,7 +29,7 @@ class HungarianMeteoAlertsParser {
     private regionalUnitHtmlParser: any;
 
     constructor(private logger: ILogger, ticktime: number) {
-        this.metHuData = <IMetHuData>(JSON.parse(fs.readFileSync('./JSON/metHuData.json', 'utf8')));
+        this.metHuData = <IMetHuData>(JSON.parse(fs.readFileSync('./static-json-data/metHuData.json', 'utf8')));
         this.timer = Observable.timer(0, ticktime * 1000).timeInterval();
         this.timer.subscribe(x => this.onTimerTick());
 
@@ -220,13 +221,13 @@ class HungarianMeteoAlertsParser {
     private async onTimerTick() {
 
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading county data`, false);
-        let countyResponses = await Observable.fromArray(this.metHuData.counties).map(county => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(county, HungarianAlertTypes.County))).merge(4).reduce((acc, value) => {
+        let countyResponses = await Observable.from(this.metHuData.counties).flatMap(county => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(county, HungarianAlertTypes.County))).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All county data downloaded: ${countyResponses.length}`, false);
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading regional unit data`, false);
-        let ruResponses = await Observable.fromArray(this.metHuData.regionalUnits).map(ru => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(ru, HungarianAlertTypes.RegionalUnit))).merge(4).reduce((acc, value) => {
+        let ruResponses = await Observable.from(this.metHuData.regionalUnits).flatMap(ru => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(ru, HungarianAlertTypes.RegionalUnit))).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
@@ -235,9 +236,9 @@ class HungarianMeteoAlertsParser {
         countyResponses = countyResponses.filter(x => x.error == null);
         ruResponses = ruResponses.filter(x => x.error == null);
 
-        await Observable.fromArray(countyResponses).map(x => Observable.fromPromise(this.parseData(this.countyHtmlParser, x.result))).last().toPromise();
+        await Observable.from(countyResponses).map(x => Observable.fromPromise(this.parseData(this.countyHtmlParser, x.result))).last().toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Counties parsed.`, false);
-        await Observable.fromArray(ruResponses).map(x => Observable.fromPromise(this.parseData(this.regionalUnitHtmlParser, x.result))).last().toPromise();
+        await Observable.from(ruResponses).map(x => Observable.fromPromise(this.parseData(this.regionalUnitHtmlParser, x.result))).last().toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Regional units parsed.`, false);
     }
 }

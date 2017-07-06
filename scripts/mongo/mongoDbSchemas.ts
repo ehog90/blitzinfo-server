@@ -14,7 +14,7 @@ import ILogDocument = Entities.ILogDocument;
 import IStationDocument = Entities.IStationDocument;
 import ICountryOutlineDocument = Entities.ICountryOutlineDocument;
 
-const autoIncrement = require("../../overridden_modules/mongodb-autoincrement");
+const autoIncrement = require("../../changed-modules/mongodb-autoincrement");
 
 /*
  MongoDB sémaleírások.

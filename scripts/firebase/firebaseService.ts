@@ -16,9 +16,10 @@ import IFcmStrokeLastLocation = Entities.IFcmStrokeLastLocation;
 import ILogger = Modules.ILogger;
 import IDatabaseSaver = Modules.IDatabaseSaver;
 import IFirebaseService = Modules.IFirebaseService;
+import {Subject} from "rxjs/Subject";
 
 class FirebaseService implements IFirebaseService {
-    private lastDataFromDatabase: Rx.Subject<IStroke>;
+    private lastDataFromDatabase: Subject<IStroke>;
     private static NOTIF_TIMEOUT: number = 1000 * 60 * 60;
     private static DEVICE_TIMEOUT: number = 1000 * 60 * 60;
 

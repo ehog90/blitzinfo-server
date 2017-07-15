@@ -1,7 +1,7 @@
 /**
  * Created by ehog on 2016. 11. 21..
  */
-import {getJson, getJsonAsync} from "../utils/httpQueries";
+import {getHttpRequestAsync} from "../utils/httpQueries";
 import {Entities} from "../interfaces/entities";
 import IGeoAddress = Entities.IGeoAddress;
 import {Modules} from "../interfaces/modules";
@@ -11,7 +11,7 @@ import {googleMapsApiKey} from "../restricted/restricted";
 class GoogleReverseGeocoder implements IReverseGeocoderAsync {
     public async getGeoInformation(latLonPair: number[]): Promise<IGeoAddress> {
         try {
-            const reverseGeocodedDataResponse: any = await getJsonAsync(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latLonPair[1]},${latLonPair[0]}&key=${googleMapsApiKey}&language=en`, 5000);
+            const reverseGeocodedDataResponse: any = await getHttpRequestAsync(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latLonPair[1]},${latLonPair[0]}&key=${googleMapsApiKey}&language=en`, 5000).toPromise();
             const reverseGeocodedData = reverseGeocodedDataResponse.result;
             const locationData: IGeoAddress = {
                 cc: null,

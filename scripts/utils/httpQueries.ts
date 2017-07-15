@@ -1,53 +1,25 @@
 ﻿import * as https from "https";
 import {RequestOptions} from "https";
-import {Entities} from "../interfaces/entities";
 const request = require("request");
-import IResult = Entities.IResult;
 import {Observable} from "rxjs/Observable";
 
-export async function getJsonAsync(url: string, timeout: number): Promise<IResult<any>> {
-    return <Promise<IResult<any>>>new Promise((resolve, reject) => {
-        request({url: url, json: true, timeout: timeout}, (error, response, body) => {
+export function getHttpRequestAsync<T>(url: string, timeout: number): Observable<T> {
+    return Observable.create(observer => {
+        request({url: url, json: true, timeout: timeout}, (error, response) => {
             if (error) {
-                resolve({error: error, result: null});
+                observer.error({error: error, errorCode: -1});
             }
             else if (response.statusCode !== 200) {
-                resolve({error: response.statusCode, result: null});
-            }
-            if (response) {
-                resolve({error: response.statusCode, result: body});
+                observer.error({error: "Other", errorCode: response.statusCode});
             }
             else {
-                resolve({error: 'Unknown', result: body});
+                observer.next(response);
             }
+            observer.complete();
+        });
+    });
+}
 
-        });
-    });
-}
-export async function getAnyAsync(url: string, timeout: number): Promise<IResult<string>> {
-    return <Promise<Entities.IResult<any>>>new Promise((resolve, reject) => {
-        request({url: url, timeout: timeout}, (error, response, body) => {
-            if (error) {
-                resolve({error: error, result: null});
-            }
-            else if (response.statusCode !== 200) {
-                resolve({error: response.statusCode, result: null});
-            }
-            resolve({error: null, result: body});
-        });
-    });
-}
-export function getJson(url, callback: (error: any, result: any) => void) {
-    request({url: url, json: true, timeout: 5000}, (error, response, body) => {
-        if (error) {
-            return callback(error, null);
-        }
-        else if (response.statusCode !== 200) {
-            return callback(response.statusCode, null);
-        }
-        callback(undefined, body);
-    });
-}
 export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): Observable<T> {
     return Observable.create(observer => {
         const request: any = https.request(opts,
@@ -59,15 +31,14 @@ export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): O
                     });
                 res.on('end',
                     () => {
-                        observer.onNext(d);
-                        observer.onCompleted();
+                        observer.next(d);
+                        observer.complete();
                     });
-
             })
             .on('error',
                 e => {
-                    observer.onError(e);
-                    observer.onCompleted();
+                    observer.error(e);
+                    observer.complete();
                 });
         request.end(JSON.stringify(message));
     });

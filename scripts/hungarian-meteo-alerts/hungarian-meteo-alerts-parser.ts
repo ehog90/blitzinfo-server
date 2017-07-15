@@ -1,6 +1,6 @@
 ﻿import * as fs from "fs";
 import * as fcmUtils from "../utils/firebase";
-import {getAnyAsync, customHttpRequestAsync} from "../utils/httpQueries";
+import {customHttpRequestAsync, getHttpRequestAsync} from "../utils/httpQueries";
 import * as mongo from "../mongo/mongoDbSchemas";
 import {logger} from "../logger/logger";
 import {Entities} from "../interfaces/entities";
@@ -11,7 +11,6 @@ import IDeviceLocationRecent = Entities.IDeviceLocationRecent;
 import IAlertArea = Entities.IAlertArea;
 import IFcmBase = Entities.IFcmBase;
 import IMeteoAlert = Entities.IMeteoAlert;
-import IResult = Entities.IResult;
 import IMetHuEntityWithData = Entities.IMetHuEntityWithData;
 import HungarianAlertTypes = Entities.HungarianAlertTypes;
 import {Observable} from "rxjs/Observable";
@@ -179,24 +178,20 @@ class HungarianMeteoAlertsParser {
         }
     }
 
-    private static async downloadData(code: number, type: HungarianAlertTypes): Promise<IResult<IMetHuEntityWithData>> {
+    private static getDataFromMetDotHu(code: number, type: HungarianAlertTypes): Observable<IMetHuEntityWithData> {
         const linkType = type === HungarianAlertTypes.County ? "wbhx" : "wahx";
-        const rawData = await getAnyAsync(`http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`, 15000);
-        if (rawData.error) {
-            return Promise.resolve({error: rawData.error, result: null});
-        }
-        return Promise.resolve({error: null, result: {type: type, code: code, data: rawData.result}});
+        return getHttpRequestAsync(`http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`, 15000)
+            .map(rawData => {return {type: type, code: code, data: rawData}})
+            .catch(() => Observable.of(null));
     }
 
     private async parseData(parser: any, entity: IMetHuEntityWithData): Promise<any> {
         return new Promise((resolve) => {
             parser.parseComplete(entity.data, result => {
+                resolve(result);
             });
-            resolve(null);
         })
     }
-
-
     private static getAlertCode(event: string) {
         if (event === "Heves zivatar") return "H_THUNDER";
         else if (event === "Széllökés") return "WIND";
@@ -221,24 +216,24 @@ class HungarianMeteoAlertsParser {
     private async onTimerTick() {
 
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading county data`, false);
-        let countyResponses = await Observable.from(this.metHuData.counties).flatMap(county => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(county, HungarianAlertTypes.County))).merge(4).reduce((acc, value) => {
+        let countyResponses = await Observable.from(this.metHuData.counties).flatMap(county => HungarianMeteoAlertsParser.getDataFromMetDotHu(county, HungarianAlertTypes.County)).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All county data downloaded: ${countyResponses.length}`, false);
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading regional unit data`, false);
-        let ruResponses = await Observable.from(this.metHuData.regionalUnits).flatMap(ru => Observable.fromPromise(HungarianMeteoAlertsParser.downloadData(ru, HungarianAlertTypes.RegionalUnit))).merge(4).reduce((acc, value) => {
+        let ruResponses = await Observable.from(this.metHuData.regionalUnits).flatMap(ru => HungarianMeteoAlertsParser.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit)).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
         }, []).toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All regional unit data downloaded: ${ruResponses.length}`, false);
 
-        countyResponses = countyResponses.filter(x => x.error == null);
-        ruResponses = ruResponses.filter(x => x.error == null);
+        countyResponses = countyResponses.filter(x => x != null);
+        ruResponses = ruResponses.filter(x => x != null);
 
-        await Observable.from(countyResponses).map(x => Observable.fromPromise(this.parseData(this.countyHtmlParser, x.result))).last().toPromise();
+        await Observable.from(countyResponses).map(x => Observable.fromPromise(this.parseData(this.countyHtmlParser, x))).last().toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Counties parsed.`, false);
-        await Observable.from(ruResponses).map(x => Observable.fromPromise(this.parseData(this.regionalUnitHtmlParser, x.result))).last().toPromise();
+        await Observable.from(ruResponses).map(x => Observable.fromPromise(this.parseData(this.regionalUnitHtmlParser, x))).last().toPromise();
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Regional units parsed.`, false);
     }
 }

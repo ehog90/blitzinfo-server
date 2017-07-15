@@ -45,7 +45,7 @@ class StationResolver implements IStationResolver {
 
     private async stationUpdateRequested() {
         const stationQueryResult = await Observable.from(StationResolver.jsonUrls).flatMap(url =>
-            Observable.fromPromise(json.getJsonAsync(`${url}&${Math.random() % 420}`, 1500))
+            json.getHttpRequestAsync(`${url}&${Math.random() % 420}`, 1500)
                 .catch(() => Observable.of(null)))
             .merge(1).filter(result => !!result).reduce((acc, value) => {
                 acc.push(value.result);

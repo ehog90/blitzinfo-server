@@ -4,10 +4,6 @@ import * as express from "express";
 export module Entities {
 
     import Socket = SocketIO.Socket;
-    export interface IResult<T> {
-        result: T;
-        error: any;
-    }
 
     export interface IGeoCodingResult {
         locationData: IGeoAddress;

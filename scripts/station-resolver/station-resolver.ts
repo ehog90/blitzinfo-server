@@ -95,8 +95,12 @@ class StationResolver implements IStationResolver {
                 {location: {"$exists": false}}]
         });
 
-        const geoResultsWithData = await Observable.from(untouched).map(x =>
-            Observable.fromPromise(mongoReverseGeocoderAsync.getGeoInformation(x.latLon)).do(location => x.location = location)
+
+        const geoResultsWithData = await Observable.from(untouched).flatMap(x =>
+            Observable.fromPromise(mongoReverseGeocoderAsync.getGeoInformation(x.latLon)).map(locRes => {
+                x.location = locRes;
+                return x;
+            })
         ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;

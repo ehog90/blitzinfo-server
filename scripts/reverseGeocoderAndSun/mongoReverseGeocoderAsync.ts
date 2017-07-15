@@ -21,8 +21,6 @@ class MongoReverseGeocoderAsync implements IReverseGeocoderAsync {
             suburbDef: null,
             strDef: null
         };
-
-
         const countryData = await crg.countryReverseGeocoderAsync.getCountryData(latLonPair);
         locationData.cc = countryData.cc;
         if (countryData.cc === "xx") {

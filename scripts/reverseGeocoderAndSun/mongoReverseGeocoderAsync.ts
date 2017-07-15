@@ -8,6 +8,7 @@ import {Modules} from "../interfaces/modules";
 import IReverseGeocoderAsync = Modules.IReverseGeoCoderAsync;
 import {Entities} from "../interfaces/entities";
 import IGeoAddress = Entities.IGeoAddress;
+import {config} from "../config";
 
 class MongoReverseGeocoderAsync implements IReverseGeocoderAsync {
 
@@ -38,7 +39,7 @@ class MongoReverseGeocoderAsync implements IReverseGeocoderAsync {
                         type: "Point",
                         coordinates: latLonPair
                     },
-                    '$maxDistance': 25000,
+                    '$maxDistance': config.geoCodingDistanceThreshold,
                     '$minDistance': 0
                 }
             }});

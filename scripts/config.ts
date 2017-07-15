@@ -10,6 +10,8 @@ export const config: IConfig = {
     restPort: 5000,
     socketIOPort: 5001,
     lightningMapsUrl: 'wss://live.lightningmaps.org',
+    geoCodingDistanceThreshold: 15000,
+    dbDupeCheckingTimeout: 60
 };
 export const initObject =  JSON.parse(fs.readFileSync("./init.json","utf8"));
 

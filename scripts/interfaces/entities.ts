@@ -46,6 +46,8 @@ export module Entities {
         environment: Environment;
         mongoLink: string;
         lightningMapsUrl: string;
+        geoCodingDistanceThreshold: number;
+        dbDupeCheckingTimeout: number;
     }
 
     export interface IServerError {

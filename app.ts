@@ -31,7 +31,7 @@ import {customMorganLogger} from "./scripts/rest/morgan-logger";
 require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
-mongoose.connect(config.mongoLink, {poolSize: 12}, (error) => {
+mongoose.connect(config.mongoLink, {poolSize: 3}, (error) => {
     if (error) {
         console.error(`Failed to connect to the database ${config.mongoLink}: ${error}`);
         process.exit(1);

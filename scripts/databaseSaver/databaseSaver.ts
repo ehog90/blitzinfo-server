@@ -3,15 +3,15 @@ import {logger} from "../logger/logger";
 import {reverseGeocoderService} from "../reverseGeocoderAndSun/reverseGeocoderService";
 import {logMongoErrors} from "../mongo-error-handling/mongo-error-handling";
 import {Modules} from "../interfaces/modules";
-import IDatabaseSaver = Modules.IDatabaseSaver;
 import {Entities} from "../interfaces/entities";
+import {Subject} from "rxjs/Subject";
+import {Observable, TimeInterval} from "rxjs/Rx";
+import {Subscription} from "rxjs/Subscription";
+import {config} from "../config";
+import IDatabaseSaver = Modules.IDatabaseSaver;
 import IReverseGeocoderService = Modules.IReverseGeoCoderService;
 import ILogger = Modules.ILogger;
-import {Subject} from "rxjs/Subject";
-import {Observable} from "rxjs/Rx";
-import {TimeInterval} from "rxjs/Rx";
 import IDisposable = Rx.IDisposable;
-import {Subscription} from "rxjs/Subscription";
 
 /* Adatbázisba mentő osztály.
  A bemeneti adatok aszinkron módon érkeznek a geokódoló osztályból (reverseGeocoder.lastGeocodedStroke)
@@ -22,12 +22,9 @@ class DatabaseSaver implements IDatabaseSaver {
     private serverEventChannel: Subject<any>;
     private dupeCheckerTimeoutTimer: Observable<TimeInterval<number>>;
     private timerSubscription: Subscription;
-    public databaseDupeCheckingTimeout: number;
 
     constructor(private logger: ILogger,
-                private reverseGeoCoder: IReverseGeocoderService,
-                databaseDupeCheckingTimeout: number) {
-        this.databaseDupeCheckingTimeout = databaseDupeCheckingTimeout;
+                private reverseGeoCoder: IReverseGeocoderService) {
         this.setUpGeocoder(reverseGeoCoder);
         this.lastSavedStroke = new Subject<Entities.IStroke>();
     }
@@ -67,74 +64,52 @@ class DatabaseSaver implements IDatabaseSaver {
 
         try {
             let savedStroke = await strokeToInsert.save();
-            await this.strokeSaved(savedStroke);
+            this.strokeSaved(savedStroke);
         }
         catch (error) {
             logMongoErrors(error);
         }
-        await strokeToInsertTtlTenMin.save(error => logMongoErrors(error));
-        await strokeToInsertTtlOneHour.save(error => logMongoErrors(error));
+        strokeToInsertTtlTenMin.save(error => logMongoErrors(error));
+        strokeToInsertTtlOneHour.save(error => logMongoErrors(error));
         return Promise.resolve();
     }
 
     private async strokeSaved(savedStroke: Entities.IStroke): Promise<any> {
-        let tenminTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (600000));
-        let minTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (60000));
-        let update: any = {};
-        let inc: any = {};
+        const tenminTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (600000));
+        const minTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (60000));
+        const update: any = {};
+        const inc: any = {};
         inc[`data.${savedStroke.locationData.cc}.c`] = 1;
         inc['all'] = 1;
-        let incAlone: any = {};
+        const incAlone: any = {};
         incAlone[`data.${savedStroke.locationData.cc}`] = 1;
         incAlone['all'] = 1;
-
         update['$inc'] = inc;
         update[`data.${savedStroke.locationData.cc}.l`] = savedStroke.time.getTime();
-
-        try {
-            await mongo.TenminStatMongoModel.update({timeStart: tenminTime}, {$inc: incAlone}, {upsert: true});
-        }
-        catch (error) {
-
-        }
-
-        try {
-            await mongo.MinStatMongoModel.update({timeStart: minTime}, update, {upsert: true});
-        }
-        catch (error) {
-
-        }
-
-        try {
-            await mongo.AllStatMongoModel.update({period: "all", isYear: false}, update, {upsert: true});
-        }
-        catch (error) {
-
-        }
-
-        try {
-            await mongo.AllStatMongoModel.update({
+        this.lastSavedStroke.next(savedStroke);
+        return Observable.forkJoin(
+            mongo.TenminStatMongoModel.update({timeStart: tenminTime}, {$inc: incAlone}, {upsert: true}).toObservable(),
+            mongo.MinStatMongoModel.update({timeStart: minTime}, update, {upsert: true}).toObservable(),
+            mongo.AllStatMongoModel.update({period: "all", isYear: false}, update, {upsert: true}).toObservable(),
+            mongo.AllStatMongoModel.update({
                 period: savedStroke.time.getUTCFullYear().toString(),
                 isYear: true
-            }, update, {upsert: true});
-        }
-        catch (error) {
+            }, update, {upsert: true}).toObservable()
+        ).toPromise();
 
-        }
-        this.lastSavedStroke.next(savedStroke);
-        return Promise.resolve();
     }
 
     private initializeTimer(): void {
-
-        this.dupeCheckerTimeoutTimer = Observable.timer(this.databaseDupeCheckingTimeout * 1000,
-            this.databaseDupeCheckingTimeout * 1000)
+        this.dupeCheckerTimeoutTimer = Observable.timer(config.dbDupeCheckingTimeout * 1000,
+            config.dbDupeCheckingTimeout * 1000)
             .timeInterval();
         this.timerSubscription = this.dupeCheckerTimeoutTimer.take(1).subscribe(x => this.unlockDupeChecker());
     }
+
     private unlockDupeChecker() {
         this.isDupeChecking = false;
-        this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking ended.', false) };
+        this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking ended.', false)
+    };
 
     private enableDupeChecking(): void {
         this.isDupeChecking = true;
@@ -147,5 +122,5 @@ class DatabaseSaver implements IDatabaseSaver {
     }
 }
 
-export const databaseSaver: IDatabaseSaver = new DatabaseSaver(logger, reverseGeocoderService, 300);
+export const databaseSaver: IDatabaseSaver = new DatabaseSaver(logger, reverseGeocoderService);
 

@@ -36,6 +36,23 @@ export module Entities {
         StatsInit = "statsInit",
     }
 
+    export enum MeteoEvents {
+        Thunder = "H_THUNDER",
+        Wind = "WIND",
+        Sleet = "SLEET",
+        SnowDrift = "SNOWDRIFT",
+        Rain = "RAIN",
+        Snow = "SNOW",
+        Fog = "FOG",
+        SurfaceFrost = "SURF_FROST",
+        ExtremeHot25 = "XTR_HOT25",
+        ExtremeHot27 = "XTR_HOT27",
+        ExtremeHot = "XTR_HOT",
+        ExtremeCold = "XTR_COLD",
+        Rainfall = "RAINFALL",
+        Other = "OTHER"
+    }
+
     export interface IConfig {
         restPort: number;
         socketIOPort: number;
@@ -273,7 +290,7 @@ export module Entities {
 
     export interface IMeteoAlert {
         level: number;
-        type: string;
+        type: MeteoEvents;
         timeFirst?: Date | number;
         timeLast?: Date | number;
     }
@@ -412,10 +429,13 @@ export module Entities {
         }
     }
 
-    export interface IStationDocument extends mongoose.Document {
+    export interface StationData {
         latLon: number[];
-        sId: number;
         name: string;
+        sId: number;
+    }
+
+    export interface IStationDocument extends mongoose.Document, StationData {
         usedCn: string;
         detCnt: string;
         lastSeen: Date;
@@ -446,7 +466,7 @@ export module Entities {
         areaType: HungarianAlertTypes,
         timeFirst: Date,
         timeLast: Date,
-        alertType: string,
+        alertType: MeteoEvents,
         level: number,
         desc: string,
         _id: string,

@@ -28,6 +28,7 @@ import {authTest, authenticationMiddleware} from "./scripts/rest/authentication-
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
 import {corsMiddleware} from "./scripts/rest/cors-middleware";
 import {customMorganLogger} from "./scripts/rest/morgan-logger";
+import {getClusters} from "./scripts/rest/clusters";
 require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
@@ -57,6 +58,7 @@ app.get('/stats/tenmin/:hours', restStats.tenminStats);
 app.get('/stats/utcyear', restStats.currentUTCYearStats);
 app.get('/stats/overall', restStats.overallStats);
 app.get('/stats/lastminutes/:mins', restStats.lastMinutesStatistics);
+app.get('/clusters', getClusters);
 app.get('/flags/:cc/:size/:format', flags.flagImage);
 app.post('/loginUser', userHandling.login);
 app.post('/registerUser', userHandling.register);

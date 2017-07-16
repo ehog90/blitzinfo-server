@@ -5,7 +5,7 @@ import {Observable} from "rxjs/Observable";
 
 export function getHttpRequestAsync<T>(url: string, timeout: number): Observable<T> {
     return Observable.create(observer => {
-        request({url: url, json: true, timeout: timeout}, (error, response) => {
+        request({url: url, json: true, timeout: timeout}, (error, response, body) => {
             if (error) {
                 observer.error({error: error, errorCode: -1});
             }
@@ -13,7 +13,7 @@ export function getHttpRequestAsync<T>(url: string, timeout: number): Observable
                 observer.error({error: "Other", errorCode: response.statusCode});
             }
             else {
-                observer.next(response);
+                observer.next(body);
             }
             observer.complete();
         });

@@ -1,0 +1,2 @@
+//Eradicate unneccessary fields
+db.getCollection('settlements').update({},{$unset: {'properties.address': true, 'properties.ref': true, 'properties.barrier': true, 'properties.highway': true, 'properties.is_in': true, 'properties.man_made': true}},{multi: true})

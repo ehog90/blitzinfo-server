@@ -6,13 +6,14 @@ import {logger} from "../logger/logger";
 import {StationsMongoModel} from "../mongo/mongoDbSchemas";
 import {lightningMapsWebSocket} from "../lightningMaps/lightningMaps";
 import {mongoReverseGeocoderAsync} from "../reverseGeocoderAndSun/mongoReverseGeocoderAsync";
-import * as _ from "lodash";
 import {Modules} from "../interfaces/modules";
-import IStationResolver = Modules.IStationResolver;
 import {Observable} from "rxjs/Observable";
 import {TimeInterval} from "rxjs/Rx";
-
-
+import * as _ from "lodash";
+import IStationResolver = Modules.IStationResolver;
+import {Entities} from "../interfaces/entities";
+import StationData = Entities.StationData;
+import IStationDocument = Entities.IStationDocument;
 class StationResolver implements IStationResolver {
     start(): void {
         this.timer = Observable.timer(0, StationResolver.tick)
@@ -44,30 +45,22 @@ class StationResolver implements IStationResolver {
         "http://www.lightningmaps.org/blitzortung/oceania/index.php?stations_json"];
 
     private async stationUpdateRequested() {
-        const stationQueryResult = await Observable.from(StationResolver.jsonUrls).flatMap(url =>
-            json.getHttpRequestAsync(`${url}&${Math.random() % 420}`, 1500)
-                .catch(() => Observable.of(null)))
-            .merge(1).filter(result => !!result).reduce((acc, value) => {
-                acc.push(value.result);
-                return acc;
-            }, []).toPromise();
+        const arrayResults: StationData[] = await Observable.from(StationResolver.jsonUrls).flatMap(url =>
+            json.getHttpRequestAsync<any>(`${url}&${Math.random() % 420}`, 1500)
+                .catch(x => Observable.of<any>({})))
+            .map(x => _(x).toPairs().map((y: any) => {return {
+                latLon: [y[1][1], y[1][0]],
+                name: y[1].c,
+                sId: Number(y[0])
+            }}).value())
+            .merge(1).reduce((acc, value) => acc.concat(value), []).toPromise();
 
         logger.sendNormalMessage(0, 0, "Stations", `Stations are downloaded`, false);
-        const arrayResults: any[] = [];
-        stationQueryResult.forEach(result => {
-            for (const key in result) {
-                if (result.hasOwnProperty(key)) {
-                    result[key].sId = key;
-                    arrayResults.push(result[key]);
-                }
-            }
-        });
-
 
         const alteredResults = await Observable.from(arrayResults).map(x =>
             StationsMongoModel.findOne({
                 sId: x.sId,
-                latLon: {"$ne": [x[1], x[0]]}
+                latLon: {"$ne": x.latLon}
             }).toObservable().filter(y => !!y).map(result => StationsMongoModel.update({
                 sId: x.sId,
             }, {"$unset": {location: true}}).toObservable())
@@ -79,11 +72,7 @@ class StationResolver implements IStationResolver {
         logger.sendNormalMessage(0, 0, `Stations`, `Altered stations: ${_.compact(alteredResults).length}`, false);
 
         await Observable.from(arrayResults).map(x =>
-            StationsMongoModel.update({sId: x.sId}, {
-                sId: x.sId,
-                name: x.c,
-                latLon: [x[1], x[0]]
-            }, {upsert: true}).toObservable()
+            StationsMongoModel.update({sId: x.sId}, x, {upsert: true}).toObservable()
         ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;
@@ -96,7 +85,7 @@ class StationResolver implements IStationResolver {
         });
 
 
-        const geoResultsWithData = await Observable.from(untouched).flatMap(x =>
+        const geoResultsWithData : IStationDocument[]= await Observable.from(untouched).flatMap(x =>
             Observable.fromPromise(mongoReverseGeocoderAsync.getGeoInformation(x.latLon)).map(locRes => {
                 x.location = locRes;
                 return x;
@@ -108,7 +97,7 @@ class StationResolver implements IStationResolver {
 
 
         const updatedStations = await Observable.from(geoResultsWithData)
-            .flatMap((station: any) =>
+            .flatMap(station =>
                 StationsMongoModel.update({sId: station.sId}, {location: station.location})
                     .toObservable()).merge(4).reduce((acc, value) => {
                 acc.push(value);

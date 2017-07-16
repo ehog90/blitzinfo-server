@@ -39,7 +39,6 @@ module.exports = function(grunt) {
                     {
                         src:
                             [
-                                'public/**/*.png',
                                 'scripts/**/*.json',
                                 'scripts/**/*.js',
                                 'changed-modules/**/*.js',

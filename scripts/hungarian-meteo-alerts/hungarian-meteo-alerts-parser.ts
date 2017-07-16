@@ -15,6 +15,7 @@ import IMetHuEntityWithData = Entities.IMetHuEntityWithData;
 import HungarianAlertTypes = Entities.HungarianAlertTypes;
 import {Observable} from "rxjs/Observable";
 import {TimeInterval} from "rxjs/Rx";
+import MeteoEvents = Entities.MeteoEvents;
 const htmlparser2 = require("htmlparser2");
 /*
  Az OMSZ meteorológiai figyelmeztetéseit érkeztető, és kezelő osztály.  Bizonyos időközönként ellenőrzi a riasztásokat, amint a met.hu oldalról tölt le, majd kezeli azokat.
@@ -185,28 +186,25 @@ class HungarianMeteoAlertsParser {
             .catch(() => Observable.of(null));
     }
 
-    private async parseData(parser: any, entity: IMetHuEntityWithData): Promise<any> {
-        return new Promise((resolve) => {
-            parser.parseComplete(entity.data, result => {
-                resolve(result);
-            });
-        })
+    private parseData(parser: any, entity: IMetHuEntityWithData) {
+        parser.parseComplete(entity.data, result => {
+        });
     }
-    private static getAlertCode(event: string) {
-        if (event === "Heves zivatar") return "H_THUNDER";
-        else if (event === "Széllökés") return "WIND";
-        else if (event === "Ónos eső") return "SLEET";
-        else if (event === "Hófúvás") return "SNOWDRIFT";
-        else if (event === "Eső") return "RAIN";
-        else if (event === "Havazás") return "SNOW";
-        else if (event === "Tartós, sűrű köd") return "FOG";
-        else if (event === "Talajmenti fagy") return "SURF_FROST";
-        else if (event === "Hőség (25 fokos középh.)") return "XTR_HOT25";
-        else if (event === "Hőség (27 fokos középh.)") return "XTR_HOT27";
-        else if (event === "Hőség") return "XTR_HOT";
-        else if (event === "Extrém hideg") return "XTR_COLD";
-        else if (event === "Felhőszakadás") return "RAINFALL";
-        return "OTHER";
+    private static getAlertCode(event: string): MeteoEvents {
+        if (event === "Heves zivatar") return MeteoEvents.Thunder;
+        else if (event === "Széllökés") return MeteoEvents.Wind;
+        else if (event === "Ónos eső") return MeteoEvents.Sleet;
+        else if (event === "Hófúvás") return MeteoEvents.SnowDrift;
+        else if (event === "Eső") return MeteoEvents.Rain;
+        else if (event === "Havazás") return MeteoEvents.Snow;
+        else if (event === "Tartós, sűrű köd") return MeteoEvents.Fog;
+        else if (event === "Talajmenti fagy") return MeteoEvents.SurfaceFrost;
+        else if (event === "Hőség (25 fokos középh.)") return MeteoEvents.ExtremeHot25;
+        else if (event === "Hőség (27 fokos középh.)") return MeteoEvents.ExtremeHot27;
+        else if (event === "Hőség") return MeteoEvents.ExtremeHot;
+        else if (event === "Extrém hideg") return MeteoEvents.ExtremeCold;
+        else if (event === "Felhőszakadás") return MeteoEvents.Rainfall;
+        return MeteoEvents.Other;
     }
 
     public invoke(): void {
@@ -230,10 +228,9 @@ class HungarianMeteoAlertsParser {
 
         countyResponses = countyResponses.filter(x => x != null);
         ruResponses = ruResponses.filter(x => x != null);
-
-        await Observable.from(countyResponses).map(x => Observable.fromPromise(this.parseData(this.countyHtmlParser, x))).last().toPromise();
+        countyResponses.map(x => this.parseData(this.countyHtmlParser, x));
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Counties parsed.`, false);
-        await Observable.from(ruResponses).map(x => Observable.fromPromise(this.parseData(this.regionalUnitHtmlParser, x))).last().toPromise();
+        ruResponses.map(x => this.parseData(this.regionalUnitHtmlParser, x));
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Regional units parsed.`, false);
     }
 }

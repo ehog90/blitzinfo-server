@@ -10,25 +10,15 @@ import {firebaseService} from "./scripts/firebase/firebaseService";
 import {logger} from "./scripts/logger/logger";
 import * as http from "http";
 import * as path from "path";
-import * as restStats from "./scripts/rest/stats";
-import * as perupdate from "./scripts/rest/perupdate";
-import * as restWelcome from "./scripts/rest/welcome";
-import * as flags from "./scripts/rest/flags";
-import * as userlogs from "./scripts/rest/locationLogs";
-import * as userHandling from "./scripts/rest/userHandling";
-import * as logs from "./scripts/rest/logs";
-import * as savedLocations from "./scripts/rest/savedLocations";
-import * as nearbyStrokes from "./scripts/rest/nearbyStrokes";
-import {getStationsAsync, stationCount, stationsByCountry} from "./scripts/rest/stations";
 import {stationResolver} from "./scripts/station-resolver/station-resolver";
 import {config} from "./scripts/config";
 import {Entities} from "./scripts/interfaces/entities";
 import IServerError = Entities.IServerError;
-import {authTest, authenticationMiddleware} from "./scripts/rest/authentication-middleware";
+import {authenticationMiddleware} from "./scripts/rest/authentication-middleware";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
 import {corsMiddleware} from "./scripts/rest/cors-middleware";
 import {customMorganLogger} from "./scripts/rest/morgan-logger";
-import {getClusters} from "./scripts/rest/clusters";
+import {defaultRouter} from "./scripts/rest/router";
 require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
@@ -41,39 +31,16 @@ mongoose.connect(config.mongoLink, {poolSize: 3}, (error) => {
         console.error(`Mongoose connected to MongoDB:  ${config.mongoLink}}`);
     }
 });
-//Express app settings
 const app = express();
 morgan.token('custom',customMorganLogger);
 app.set('view engine', 'jade');
-//noinspection TypeScriptValidateTypes
 app.use(morgan(':method :url :response-time :status :custom', {}));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(method_override());
 app.use(corsMiddleware);
 app.use(authenticationMiddleware);
-app.get('/', restWelcome.welcome);
-app.get('/auth/test', authTest);
-app.get('/stats/tenmin/:hours', restStats.tenminStats);
-app.get('/stats/utcyear', restStats.currentUTCYearStats);
-app.get('/stats/overall', restStats.overallStats);
-app.get('/stats/lastminutes/:mins', restStats.lastMinutesStatistics);
-app.get('/clusters', getClusters);
-app.get('/flags/:cc/:size/:format', flags.flagImage);
-app.post('/loginUser', userHandling.login);
-app.post('/registerUser', userHandling.register);
-app.get('/stations', stationCount);
-app.get('/stationsNearby', getStationsAsync);
-app.get('/stationsByCountry', stationsByCountry);
-app.get('/logs/:type/:time', logs.errors);
-app.get('/nearby/:lat,:lon', nearbyStrokes.nearbyStrokes);
-
-app.post('/auth/user-location-logs', userlogs.locationLogsForUser);
-app.post('/auth/periodic-update', perupdate.periodicUpdate);
-app.get('/auth/saved-locations', savedLocations.getLocationsForUser);
-app.post('/auth/saved-locations', savedLocations.newLocationInstance);
-app.delete('/auth/saved-locations/:locationId', savedLocations.removeLocationInstance);
-
+app.use(defaultRouter);
 
 const server = http.createServer(app);
 server.listen(config.restPort);

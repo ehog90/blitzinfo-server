@@ -33,8 +33,7 @@ mongoose.connect(config.mongoLink, {poolSize: 3}, (error) => {
 });
 const app = express();
 morgan.token('custom',customMorganLogger);
-app.set('view engine', 'jade');
-app.use(morgan(':method :url :response-time :status :custom', {}));
+app.use(morgan(':method :url :response-time :status :custom'));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(method_override());

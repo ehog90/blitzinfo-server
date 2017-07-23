@@ -4,6 +4,8 @@ import * as express from "express";
 export module Entities {
 
     import Socket = SocketIO.Socket;
+    import GeocoderResult = google.maps.GeocoderResult;
+    import GeocoderStatus = google.maps.GeocoderStatus;
 
     export interface IGeoCodingResult {
         locationData: IGeoAddress;
@@ -150,7 +152,6 @@ export module Entities {
         suburbDef: string;
         sm_hun?: string;
     }
-
 
     export interface IStroke {
         latLon: number[];
@@ -569,6 +570,9 @@ export module Entities {
         }
     }
 
-
+    export interface IGoogleGeocodingResponse{
+        results: GeocoderResult[],
+        status: GeocoderStatus
+    }
 }
 

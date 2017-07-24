@@ -34,6 +34,7 @@ import HungarianAlertTypes = Entities.HungarianAlertTypes;
 import LocationUpdateSource = Entities.LocationUpdateSource;
 import SocketIoRooms = Entities.SocketIoRooms;
 import SocketIoConnectionTypes = Entities.SocketIoConnectionTypes;
+import IMetHuAlertDocument = Entities.IMetHuAlertDocument;
 
 export class SocketIoServer implements ISocketIoServer {
     private socketIoServer: Server;
@@ -117,10 +118,10 @@ export class SocketIoServer implements ISocketIoServer {
             mongo.AllStatMongoModel.findOne({
                 isYear: true,
                 period: year.toString()
-            }).toObservable().map(x => StatUtils.processStatResult(x.data)),
-            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_DAY)}}).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
-            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_HOUR)}}).toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
-            mongo.TenminStatMongoModel.find({}).sort({timeStart: -1}).limit(SocketIoServer.STAT_HOURS * 6).toObservable().map(x => StatUtils.getFlatTenMinStatistics(x))
+            }).lean().toObservable().map((x: IAllStatDocument) => StatUtils.processStatResult(x.data)),
+            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_DAY)}}).lean().toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
+            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_HOUR)}}).lean().toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
+            mongo.TenminStatMongoModel.find({}).sort({timeStart: -1}).limit(SocketIoServer.STAT_HOURS * 6).lean().toObservable().map(x => StatUtils.getFlatTenMinStatistics(x))
         ).toPromise();
         request.emit(SocketIoRooms.StatsInit, statData);
     }
@@ -158,11 +159,11 @@ export class SocketIoServer implements ISocketIoServer {
 
     private static async sendAlerts(connection: StrokeSocket, hungarianData: IHungarianRegionalInformation): Promise<IAlertArea> {
         if (hungarianData.isInHungary) {
-            const alerts = await mongo.AlertsMongoModel.find({
+            const alerts = <IMetHuAlertDocument[]>await mongo.AlertsMongoModel.find({
                 "areaType": HungarianAlertTypes.County,
                 "areaName": hungarianData.regionalData.countyName,
                 "timeLast": {"$eq": null}
-            });
+            }).lean();
             const toAlerts = alerts.map(x => {
                 return ({
                     type: x.alertType,

@@ -9,6 +9,7 @@ import IReverseGeocoderAsync = Modules.IReverseGeoCoderAsync;
 import {Entities} from "../interfaces/entities";
 import IGeoAddress = Entities.IGeoAddress;
 import {config} from "../config";
+import ISettlementDocument = Entities.ISettlementDocument;
 
 class MongoReverseGeocoderAsync implements IReverseGeocoderAsync {
 
@@ -30,7 +31,7 @@ class MongoReverseGeocoderAsync implements IReverseGeocoderAsync {
             return Promise.resolve(locationData);
         }
 
-        const result = await mongo.SettlementsModel.findOne({
+        const result = <ISettlementDocument>await mongo.SettlementsModel.findOne({
             'geometry.coordinates': {
                 '$near': {
                     '$geometry': {
@@ -40,9 +41,9 @@ class MongoReverseGeocoderAsync implements IReverseGeocoderAsync {
                     '$maxDistance': config.geoCodingDistanceThreshold,
                     '$minDistance': 0
                 }
-            }});
+            }}).lean();
 
-        if (result != null) {
+        if (result) {
             locationData.smDef = result.properties.name;
             if (result.properties.other_tags != null) {
                 let tags = this.processOtherTags(result.properties.other_tags);

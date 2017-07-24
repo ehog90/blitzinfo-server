@@ -11,13 +11,14 @@ import {config} from "../config";
 import IDatabaseSaver = Modules.IDatabaseSaver;
 import IReverseGeocoderService = Modules.IReverseGeoCoderService;
 import ILogger = Modules.ILogger;
-import IDisposable = Rx.IDisposable;
+import IStroke = Entities.IStroke;
+import IStrokeDocument = Entities.IStrokeDocument;
 
 /* Adatbázisba mentő osztály.
  A bemeneti adatok aszinkron módon érkeznek a geokódoló osztályból (reverseGeocoder.lastGeocodedStroke)
  */
 class DatabaseSaver implements IDatabaseSaver {
-    public lastSavedStroke: Subject<Entities.IStroke>;
+    public lastSavedStroke: Subject<IStroke>;
     public isDupeChecking: boolean;
     private serverEventChannel: Subject<any>;
     private dupeCheckerTimeoutTimer: Observable<TimeInterval<number>>;
@@ -26,7 +27,7 @@ class DatabaseSaver implements IDatabaseSaver {
     constructor(private logger: ILogger,
                 private reverseGeoCoder: IReverseGeocoderService) {
         this.setUpGeocoder(reverseGeoCoder);
-        this.lastSavedStroke = new Subject<Entities.IStroke>();
+        this.lastSavedStroke = new Subject<IStroke>();
     }
 
     private setUpGeocoder(reverseGeoCoder: IReverseGeocoderService) {
@@ -37,7 +38,7 @@ class DatabaseSaver implements IDatabaseSaver {
         this.reverseGeoCoder.lastGeocodedStroke.subscribe(x => this.strokeGeoCoded(x));
     }
 
-    private async strokeGeoCoded(stroke: Entities.IStroke): Promise<any> {
+    private async strokeGeoCoded(stroke: IStroke): Promise<any> {
         if (this.isDupeChecking) {
             let result = await mongo.TtlTenMinStrokeMongoModel.findOne({'blitzortungId': stroke.blitzortungId});
             if (!result) {
@@ -57,14 +58,14 @@ class DatabaseSaver implements IDatabaseSaver {
         }
     }
 
-    private async saveStroke(stroke: Entities.IStroke): Promise<any> {
+    private async saveStroke(stroke: IStroke): Promise<any> {
         let strokeToInsert = new mongo.AllStrokeMongoModel(stroke);
         let strokeToInsertTtlTenMin = new mongo.TtlTenMinStrokeMongoModel(stroke);
         let strokeToInsertTtlOneHour = new mongo.TtlOneHourStrokeMongoModel(stroke);
 
         try {
-            let savedStroke = await strokeToInsert.save();
-            this.strokeSaved(savedStroke);
+            const savedStroke = await strokeToInsert.save();
+            this.strokeSaved(<IStroke>savedStroke.toObject());
         }
         catch (error) {
             logMongoErrors(error);
@@ -74,7 +75,7 @@ class DatabaseSaver implements IDatabaseSaver {
         return Promise.resolve();
     }
 
-    private async strokeSaved(savedStroke: Entities.IStroke): Promise<any> {
+    private async strokeSaved(savedStroke: IStroke): Promise<any> {
         const tenminTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (600000));
         const minTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (60000));
         const update: any = {};
@@ -88,13 +89,13 @@ class DatabaseSaver implements IDatabaseSaver {
         update[`data.${savedStroke.locationData.cc}.l`] = savedStroke.time.getTime();
         this.lastSavedStroke.next(savedStroke);
         return Observable.forkJoin(
-            mongo.TenminStatMongoModel.update({timeStart: tenminTime}, {$inc: incAlone}, {upsert: true}).toObservable(),
-            mongo.MinStatMongoModel.update({timeStart: minTime}, update, {upsert: true}).toObservable(),
-            mongo.AllStatMongoModel.update({period: "all", isYear: false}, update, {upsert: true}).toObservable(),
+            mongo.TenminStatMongoModel.update({timeStart: tenminTime}, {$inc: incAlone}, {upsert: true}).lean().toObservable(),
+            mongo.MinStatMongoModel.update({timeStart: minTime}, update, {upsert: true}).lean().toObservable(),
+            mongo.AllStatMongoModel.update({period: "all", isYear: false}, update, {upsert: true}).lean().toObservable(),
             mongo.AllStatMongoModel.update({
                 period: savedStroke.time.getUTCFullYear().toString(),
                 isYear: true
-            }, update, {upsert: true}).toObservable()
+            }, update, {upsert: true}).lean().toObservable()
         ).toPromise();
 
     }

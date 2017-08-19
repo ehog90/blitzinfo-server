@@ -1,7 +1,7 @@
 ﻿import * as websocket from "websocket";
 import {logger} from "../logger/logger";
 import {config, initObject} from "../config";
-import * as _ from "lodash";
+import {uniqBy, uniqWith, chain}  from "lodash";
 import {Modules} from "../interfaces/modules";
 import {Entities} from "../interfaces/entities";
 import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
@@ -12,7 +12,6 @@ import ILightningMapsStrokeBulk = Entities.ILightningMapsStrokeBulk;
 import ISocketInitialization = Entities.ISocketInitialization;
 import {Subject} from "rxjs/Subject";
 import {Observable,TimeInterval} from "rxjs/Rx";
-import IDisposable = Rx.IDisposable;
 import {Subscription} from "rxjs/Subscription";
 /*
  A LightningMaps-kapcsolatért felelős osztály. a villámok aszinkron módon érkeznek a távoli szerverről, és továbbítja azt az adatbázisba mentésért felelős osztálynak.
@@ -157,7 +156,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                             if (messageParsed.strokes != null) {
                                 const messageBulk = <ILightningMapsStrokeBulk>messageParsed;
                                 const originalStrokes = messageBulk.strokes;
-                                messageBulk.strokes = _.uniqBy(messageBulk.strokes, item => item.id);
+                                messageBulk.strokes = uniqWith(messageBulk.strokes, (a, b) => (a.lat == b.lat && a.lon == b.lon) || a.id == b.id);
                                 if (originalStrokes.length !== messageBulk.strokes.length) {
                                     this.logger
                                         .sendWarningMessage(0,

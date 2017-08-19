@@ -20,7 +20,6 @@ import IStroke = Entities.IStroke;
 import ILocationUpdater = Modules.ILocationUpdater;
 import ILogger = Modules.ILogger;
 import IAllStatDocument = Entities.IAllStatDocument;
-import IMinutelyStatDocument = Entities.IMinutelyStatDocument;
 import IInitializationMessage = Entities.IInitializationMessage;
 import ILog = Entities.ILog;
 import IHungarianRegionalInformation = Entities.IHungarianRegionalInformation;

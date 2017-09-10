@@ -11,6 +11,7 @@ export module Entities {
         locationData: IGeoAddress;
         hungarianData: IHungarianRegionalInformation;
     }
+
     export interface ILocationLogResult {
         geocodingResult: IGeoCodingResult;
         id: string;
@@ -53,6 +54,16 @@ export module Entities {
         ExtremeCold = "XTR_COLD",
         Rainfall = "RAINFALL",
         Other = "OTHER"
+    }
+
+    export enum SunState {
+        Daytime = "DAYTIME",
+        Sunset = "SUNSET",
+        Sunrise = "SUNRISE",
+        CivilTwilight = "CIVIL_TWILIGHT",
+        NauticalTwilight = "NAUTICAL_TWILIGHT",
+        AstronomicalTwilight = "ASTRONOMICAL_TWILIGHT",
+        Night = "NIGHT",
     }
 
     export interface IConfig {
@@ -160,7 +171,7 @@ export module Entities {
         sunData: {
             sunElev: number;
             azimuth: number;
-            sunState: string;
+            sunState: SunState;
         };
         blitzortungId: number;
         dist?: number;
@@ -239,6 +250,7 @@ export module Entities {
         }
         hunData: IHungarianRegionalInformation;
     }
+
     export interface IDeviceLocationLog extends IDeviceLocationBase {
         alerts: IStroke[];
         accsum: number;
@@ -494,6 +506,7 @@ export module Entities {
             time: number;
         }
     }
+
     export interface IUserRegistrationRequest {
         body: {
             uname: string;
@@ -532,8 +545,10 @@ export module Entities {
         userInfo?: Entities.IInitializationMessage | null;
         allStatInfo?: Entities.ISocketIoAllStatRequest | null;
         connectionType?: SocketIoConnectionTypes[] | null;
+
         //This is just a temporary workaround Just overriding these because of the red lines in the IDE.
         on(event: string | symbol | SocketIoRooms, listener: Function): this;
+
         emit(event: string | symbol | SocketIoRooms, ...args: any[]): boolean;
     }
 
@@ -550,6 +565,7 @@ export module Entities {
             se: IUserSession;
         }
     }
+
     export interface INewSavedLocationInstance extends IAuthenticatedRequest {
         body: {
             se: Entities.IUserSession;
@@ -570,7 +586,7 @@ export module Entities {
         }
     }
 
-    export interface IGoogleGeocodingResponse{
+    export interface IGoogleGeocodingResponse {
         results: GeocoderResult[],
         status: GeocoderStatus
     }

@@ -29,7 +29,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
     private processedStrokes: Array<IIdAndDate>;
     private timeoutCheckerTimer: Observable<TimeInterval<number>>;
     private reconnectTimer: Observable<TimeInterval<number>>;
-    private duplicateDatas: Subject<ILightningMapsStroke>;
+    private duplicatedData: Subject<ILightningMapsStroke>;
     private timerSubscription: Subscription;
     private reconnectSubscription: Subscription;
     private url: string;
@@ -42,7 +42,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
         this.lastTimeWhenReceived = new Date().getTime();
         this.strokeEventChannel = new Subject<any>();
         this.lastReceived = new Subject<ILightningMapsStroke>();
-        this.duplicateDatas = new Subject<ILightningMapsStroke>();
+        this.duplicatedData = new Subject<ILightningMapsStroke>();
 
         this.timeoutCheckerTimer = Observable.timer(this.timeoutInSec * 1000, this.timeoutInSec * 1000)
             .timeInterval();
@@ -50,7 +50,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
             .timeInterval();
         this.timerSubscription = this.timeoutCheckerTimer.subscribe(x => this.timeoutTimerSubscription());
         this.reconnectSubscription = this.reconnectTimer.subscribe(x => this.reconnectTimerSubscription());
-        this.duplicateDatas
+        this.duplicatedData
             .buffer(Observable.interval(10000))
             .subscribe(strokes => {
                 if (strokes.length > 0) {
@@ -175,7 +175,7 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                                                 `Malformed stroke: [ID=${x.id}, lat=${x.lat}, lon=${x.lon}]`,
                                                 true);
                                     } else if (this.isStrokeAlreadyProcessed(x)) {
-                                        this.duplicateDatas.next(x);
+                                        this.duplicatedData.next(x);
                                     } else {
                                         this.processedStrokes.unshift({id: x.id, time: x.time});
                                         this.lastReceived.next(x);

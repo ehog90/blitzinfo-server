@@ -22,7 +22,7 @@ import {defaultRouter} from "./scripts/rest/router";
 require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
-mongoose.connect(config.mongoLink, {poolSize: 3}, (error) => {
+mongoose.connect(config.mongoLink, {poolSize: 3, useMongoClient: true}, (error) => {
     if (error) {
         console.error(`Failed to connect to the database ${config.mongoLink}: ${error}`);
         process.exit(1);

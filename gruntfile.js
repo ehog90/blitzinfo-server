@@ -30,6 +30,8 @@ module.exports = function(grunt) {
                                 'changed-modules/**/*.js',
                                 'static-json-data/**/*.json',
                                 '*.json',
+                                '*.sh',
+                                '*.cmd',
                             ],
                         dest: 'dist/'},
                 ]

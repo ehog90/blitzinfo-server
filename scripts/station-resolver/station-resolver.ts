@@ -5,7 +5,6 @@ import * as json from "../utils/httpQueries";
 import {logger} from "../logger/logger";
 import {StationsMongoModel} from "../mongo/mongoDbSchemas";
 import {lightningMapsWebSocket} from "../lightningMaps/lightningMaps";
-import {mongoReverseGeocoderAsync} from "../reverseGeocoderAndSun/mongoReverseGeocoderAsync";
 import {Modules} from "../interfaces/modules";
 import {Observable} from "rxjs/Observable";
 import {TimeInterval} from "rxjs/Rx";
@@ -14,6 +13,7 @@ import IStationResolver = Modules.IStationResolver;
 import {Entities} from "../interfaces/entities";
 import StationData = Entities.StationData;
 import IStationDocument = Entities.IStationDocument;
+import {remoteMongoReverseGeocoderAsync} from "../reverseGeocoderAndSun/remote-mongo-reverse-geocoder";
 class StationResolver implements IStationResolver {
     start(): void {
         this.timer = Observable.timer(0, StationResolver.tick)
@@ -86,7 +86,7 @@ class StationResolver implements IStationResolver {
 
 
         const geoResultsWithData : IStationDocument[]= await Observable.from(untouched).flatMap(x =>
-            Observable.fromPromise(mongoReverseGeocoderAsync.getGeoInformation(x.latLon)).map(locRes => {
+            Observable.fromPromise(remoteMongoReverseGeocoderAsync.getGeoInformation(x.latLon)).map(locRes => {
                 x.location = locRes;
                 return x;
             })

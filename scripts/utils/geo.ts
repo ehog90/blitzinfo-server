@@ -5,6 +5,7 @@
 
 import {Entities} from "../interfaces/entities";
 import IGeoInformation = Entities.IGeoInformation;
+import SunState = Entities.SunState;
 export function toRadians(num: number): number {
     return num * (Math.PI / 180);
 }
@@ -64,23 +65,23 @@ export function getDistance(start: number[], end: number[]) {
     return dist;
 }
 
-export function getSunState(elevation: number, azimuth: number) : string {
+export function getSunState(elevation: number, azimuth: number) : SunState {
 
     if (azimuth > 0) {
-        if (elevation > 0.5) return 'DAYTIME';
-        else if (elevation <= 0.5 && elevation >= -0.5) return 'SUNSET';
-        else if (elevation < -0.5 && elevation >= -6) return 'CIVIL_TWILIGHT';
-        else if (elevation < -6 && elevation >= -12) return 'NAUTICAL_TWILIGHT';
-        else if (elevation < -12 && elevation >= -18) return 'ASTRONOMICAL_TWILIGHT';
-        else return 'NIGHT';
+        if (elevation > 0.5) return SunState.Daytime;
+        else if (elevation <= 0.5 && elevation >= -0.5) return SunState.Sunset;
+        else if (elevation < -0.5 && elevation >= -6) return SunState.CivilTwilight;
+        else if (elevation < -6 && elevation >= -12) return SunState.NauticalTwilight;
+        else if (elevation < -12 && elevation >= -18) return SunState.AstronomicalTwilight;
+        else return SunState.Night;
     }
     else {
-        if (elevation > 0.5) return 'DAYTIME';
-        else if (elevation <= 0.5 && elevation >= -0.5) return 'SUNRISE';
-        else if (elevation < -0.5 && elevation >= -6) return 'CIVIL_TWILIGHT';
-        else if (elevation < -6 && elevation >= -12) return 'NAUTICAL_TWILIGHT';
-        else if (elevation < -12 && elevation >= -18) return 'ASTRONOMICAL_TWILIGHT';
-        else return 'NIGHT';
+        if (elevation > 0.5) return SunState.Daytime;
+        else if (elevation <= 0.5 && elevation >= -0.5) return SunState.Sunrise;
+        else if (elevation < -0.5 && elevation >= -6) return SunState.CivilTwilight;
+        else if (elevation < -6 && elevation >= -12) return SunState.NauticalTwilight;
+        else if (elevation < -12 && elevation >= -18) return SunState.AstronomicalTwilight;
+        else return SunState.Night;
     }
 }
 

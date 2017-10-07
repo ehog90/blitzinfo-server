@@ -64,7 +64,7 @@ class StationResolver implements IStationResolver {
                 latLon: {"$ne": x.latLon}
             }).toObservable().filter(y => !!y).map(result => StationsMongoModel.update({
                 sId: x.sId,
-            }, {"$unset": {location: true}, latLon: x.latLon}).toObservable())
+            }, {"$unset": {location: true}, '$set': {latLon: x.latLon}}).toObservable())
         ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;

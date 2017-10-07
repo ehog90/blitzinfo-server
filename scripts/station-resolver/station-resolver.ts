@@ -14,6 +14,8 @@ import {Entities} from "../interfaces/entities";
 import StationData = Entities.StationData;
 import IStationDocument = Entities.IStationDocument;
 import {remoteMongoReverseGeocoderAsync} from "../reverseGeocoderAndSun/remote-mongo-reverse-geocoder";
+import {toPairs} from 'lodash'
+
 class StationResolver implements IStationResolver {
     start(): void {
         this.timer = Observable.timer(0, StationResolver.tick)
@@ -43,16 +45,15 @@ class StationResolver implements IStationResolver {
         "http://www.lightningmaps.org/blitzortung/europe/index.php?stations_json",
         "http://www.lightningmaps.org/blitzortung/america/index.php?stations_json",
         "http://www.lightningmaps.org/blitzortung/oceania/index.php?stations_json"];
-
     private async stationUpdateRequested() {
         const arrayResults: StationData[] = await Observable.from(StationResolver.jsonUrls).flatMap(url =>
             json.getHttpRequestAsync<any>(`${url}&${Math.random() % 420}`, 1500)
                 .catch(x => Observable.of<any>({})))
-            .map(x => _(x).toPairs().map((y: any) => {return {
+            .map(x => toPairs(x).map((y: any) => {return {
                 latLon: [y[1][1], y[1][0]],
                 name: y[1].c,
                 sId: Number(y[0])
-            }}).value())
+            }}))
             .merge(1).reduce((acc, value) => acc.concat(value), []).toPromise();
 
         logger.sendNormalMessage(0, 0, "Stations", `Stations are downloaded`, false);
@@ -63,7 +64,7 @@ class StationResolver implements IStationResolver {
                 latLon: {"$ne": x.latLon}
             }).toObservable().filter(y => !!y).map(result => StationsMongoModel.update({
                 sId: x.sId,
-            }, {"$unset": {location: true}}).toObservable())
+            }, {"$unset": {location: true}, latLon: x.latLon}).toObservable())
         ).merge(4).reduce((acc, value) => {
             acc.push(value);
             return acc;

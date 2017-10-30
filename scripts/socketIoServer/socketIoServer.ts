@@ -78,11 +78,11 @@ export class SocketIoServer implements ISocketIoServer {
 
 
     private getAllSockets(): Array<StrokeSocket> {
-        let sockets = this.socketIoServer.nsps['/'].connected;
-        let socketsArray: Array<StrokeSocket> = [];
+        const sockets = this.socketIoServer.nsps['/'].connected;
+        const socketsArray = [];
         for (let sockKey in sockets) {
             if (sockets.hasOwnProperty(sockKey))
-                socketsArray.push(<StrokeSocket>sockets[sockKey]);
+                socketsArray.push(sockets[sockKey]);
         }
         return socketsArray;
     }
@@ -92,7 +92,7 @@ export class SocketIoServer implements ISocketIoServer {
         this.logger.sendNormalMessage(0, 120, 'Socket.IO server', `User connected: ${request.client.conn.remoteAddress}`, false);
         request.on(SocketIoRooms.StrokesInit, (message) => this.onStrokesInitReceived(request, message));
         request.on(SocketIoRooms.StatsInit, (msg) => this.onStatQueryRequested(request, msg));
-        request.on(SocketIoRooms.LoggingInit, (message) => this.onLogRequestReceived(request));
+        request.on(SocketIoRooms.LoggingInit, (message) => SocketIoServer.onLogRequestReceived(request));
         request.on('disconnect', connection => this.onClientDisconnected());
     }
 
@@ -107,7 +107,6 @@ export class SocketIoServer implements ISocketIoServer {
     private async onStatQueryRequested(request: StrokeSocket, message: any) {
         this.logger.sendNormalMessage(0, 112, 'Socket.IO server', `Stat request: ${request.client.conn.remoteAddress}, message: ${JSON.stringify(message)}`, false);
         request.connectionType.push(SocketIoConnectionTypes.Stat);
-
         const year = new Date().getUTCFullYear();
         const statData = await Observable.forkJoin(
             mongo.AllStatMongoModel.findOne({
@@ -118,8 +117,8 @@ export class SocketIoServer implements ISocketIoServer {
                 isYear: true,
                 period: year.toString()
             }).lean().toObservable().map((x: IAllStatDocument) => StatUtils.processStatResult(x.data)),
-            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_DAY)}}).lean().toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
-            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(new Date().getTime() - SocketIoServer.LAST_HOUR)}}).lean().toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
+            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(Date.now() - SocketIoServer.LAST_DAY)}}).lean().toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
+            mongo.MinStatMongoModel.find({'timeStart': {'$gt': new Date(Date.now() - SocketIoServer.LAST_HOUR)}}).lean().toObservable().map(x => StatUtils.getFlatAllStatistics(x)),
             mongo.TenminStatMongoModel.find({}).sort({timeStart: -1}).limit(SocketIoServer.STAT_HOURS * 6).lean().toObservable().map(x => StatUtils.getFlatTenMinStatistics(x))
         ).toPromise();
         request.emit(SocketIoRooms.StatsInit, statData);
@@ -134,11 +133,12 @@ export class SocketIoServer implements ISocketIoServer {
         });
     }
 
-    private onLogRequestReceived(connection: StrokeSocket) {
+    private static async onLogRequestReceived(connection: StrokeSocket) {
         connection.connectionType.push(SocketIoConnectionTypes.Log);
-        mongo.LogsMongoModel.find({time: {'$gt': new Date(new Date().getTime() - 1000 * 60 * 10)}}).sort({time: -1}).limit(10000).exec((error, results: Array<ILog>) => {
-            connection.emit(SocketIoRooms.LoggingInit, results);
-        });
+        const results = await mongo.LogsMongoModel.find(
+            {time:
+                {'$gt': new Date(Date.now() - 600000)}}).sort({time: -1}).limit(10000).lean();
+        connection.emit(SocketIoRooms.LoggingInit, results);
     }
 
     private validateInitializationMessage(initializationMessage: IInitializationMessage): boolean {
@@ -189,7 +189,7 @@ export class SocketIoServer implements ISocketIoServer {
     }
 
     private getLocaleNames(strokes: Array<IStroke>, locale: string): Array<IStroke> {
-        if (locale && localeDatabase[locale] != undefined) {
+        if (locale && !localeDatabase[locale]) {
             strokes.map(stroke => SocketIoServer.getLocaleName(stroke, locale));
         }
         return strokes;
@@ -301,7 +301,6 @@ export class SocketIoServer implements ISocketIoServer {
             else {
                 connection.disconnect(true);
             }
-
         }
         catch (exc) {
         }
@@ -333,11 +332,9 @@ export class SocketIoServer implements ISocketIoServer {
             }
         });
     }
-
     public invoke(): void {
 
     }
-
     private onClientDisconnected() {
         this.logger.sendNormalMessage(0, 94, 'Socket.IO server', `User disconnected`, false);
     }

@@ -38,44 +38,36 @@ class DatabaseSaver implements IDatabaseSaver {
         this.reverseGeoCoder.lastGeocodedStroke.subscribe(x => this.strokeGeoCoded(x));
     }
 
-    private async strokeGeoCoded(stroke: IStroke): Promise<any> {
+    private strokeGeoCoded(stroke: IStroke) {
         if (this.isDupeChecking) {
-            let result = await mongo.TtlTenMinStrokeMongoModel.findOne({'blitzortungId': stroke.blitzortungId});
-            if (!result) {
-                await this.saveStroke(stroke);
-                return Promise.resolve()
-            }
-            this.logger.sendWarningMessage(0,
-                0,
-                'Database Saver',
-                `Stroke is dupe: ${stroke.blitzortungId}`,
-                true);
-            return Promise.resolve()
+            mongo.TtlTenMinStrokeMongoModel.findOne({'blitzortungId': stroke.blitzortungId}).then(result => {
+                if (!result) {
+                    this.saveStroke(stroke);
+                }
+                this.logger.sendWarningMessage(0,
+                    0,
+                    'Database Saver',
+                    `Stroke is dupe: ${stroke.blitzortungId}`,
+                    true);
+            });
         }
         else {
-            await this.saveStroke(stroke);
-            return Promise.resolve();
+            this.saveStroke(stroke);
         }
     }
 
-    private async saveStroke(stroke: IStroke): Promise<any> {
+    private saveStroke(stroke: IStroke) {
         let strokeToInsert = new mongo.AllStrokeMongoModel(stroke);
         let strokeToInsertTtlTenMin = new mongo.TtlTenMinStrokeMongoModel(stroke);
         let strokeToInsertTtlOneHour = new mongo.TtlOneHourStrokeMongoModel(stroke);
-
-        try {
-            const savedStroke = await strokeToInsert.save();
-            this.strokeSaved(<IStroke>savedStroke.toObject());
-        }
-        catch (error) {
-            logMongoErrors(error);
-        }
-        strokeToInsertTtlTenMin.save(error => logMongoErrors(error));
-        strokeToInsertTtlOneHour.save(error => logMongoErrors(error));
-        return Promise.resolve();
+        strokeToInsert.save().then(savedStroke => {
+            this.updateStatistics(<IStroke>savedStroke.toObject());
+            strokeToInsertTtlTenMin.save(error => logMongoErrors(error));
+            strokeToInsertTtlOneHour.save(error => logMongoErrors(error));
+        });
     }
 
-    private async strokeSaved(savedStroke: IStroke): Promise<any> {
+    private updateStatistics(savedStroke: IStroke) {
         const tenminTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (600000));
         const minTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % (60000));
         const update: any = {};
@@ -88,15 +80,17 @@ class DatabaseSaver implements IDatabaseSaver {
         update['$inc'] = inc;
         update[`data.${savedStroke.locationData.cc}.l`] = savedStroke.time.getTime();
         this.lastSavedStroke.next(savedStroke);
-        return Observable.forkJoin(
-            mongo.TenminStatMongoModel.update({timeStart: tenminTime}, {$inc: incAlone}, {upsert: true}).lean().toObservable(),
-            mongo.MinStatMongoModel.update({timeStart: minTime}, update, {upsert: true}).lean().toObservable(),
-            mongo.AllStatMongoModel.update({period: "all", isYear: false}, update, {upsert: true}).lean().toObservable(),
-            mongo.AllStatMongoModel.update({
-                period: savedStroke.time.getUTCFullYear().toString(),
-                isYear: true
-            }, update, {upsert: true}).lean().toObservable()
-        ).toPromise();
+
+        mongo.TenminStatMongoModel.update({timeStart: tenminTime}, {$inc: incAlone}, {upsert: true}).lean().exec();
+        mongo.MinStatMongoModel.update({timeStart: minTime}, update, {upsert: true}).lean().exec();
+        mongo.AllStatMongoModel.update({
+            period: "all",
+            isYear: false
+        }, update, {upsert: true}).lean().exec();
+        mongo.AllStatMongoModel.update({
+            period: savedStroke.time.getUTCFullYear().toString(),
+            isYear: true
+        }, update, {upsert: true}).lean().exec();
 
     }
 

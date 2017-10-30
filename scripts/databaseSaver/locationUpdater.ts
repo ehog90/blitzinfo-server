@@ -163,8 +163,7 @@ export class LocationUpdater implements ILocationUpdater {
             let logResult = await this.insertLastLocationToDatabase(updater, deviceData);
             let existingData = await mongo.LocationRecentMongoModel.findOne({'did': {'$eq': deviceData.se.did}});
             if (!existingData) {
-                let locationRecent = LocationUpdater.saveRecentToDatabase(updater, deviceData, logResult);
-                return Promise.resolve(locationRecent);
+                return Promise.resolve(LocationUpdater.saveRecentToDatabase(updater, deviceData, logResult));
             }
             else {
                 await mongo.LocationRecentMongoModel.update(
@@ -174,7 +173,7 @@ export class LocationUpdater implements ILocationUpdater {
                             num: 1
                         },
                         'acc': deviceData.acc,
-                        'timeLast': new Date().getTime(),
+                        'timeLast': Date.now(),
                         'hunData': logResult.geocodingResult.hungarianData,
                         'location': logResult,
                         'latLon': deviceData.latLon,
@@ -191,38 +190,32 @@ export class LocationUpdater implements ILocationUpdater {
     }
 
     private async insertLastLocationToDatabase(updater: LocationUpdateSource, deviceData: IDeviceUpdateRequestBody): Promise<ILocationLogResult> {
-        try {
-            let existingData = await mongo.LocationLogMongoModel.findOne({'did': {'$eq': deviceData.se.did}}).sort({'timeLast': -1});
-            if (!existingData) {
-                let locationData = await this.reverseGeocodeWithCountryAsync(deviceData.latLon);
-                let saved = await LocationUpdater.saveNewLogToDatabase(updater, deviceData, locationData);
-                return Promise.resolve({geocodingResult: locationData, id: saved._id.toString()});
-            }
-            else if (geoUtils.getDistance(deviceData.latLon, existingData.latLon) < 0.1) {
-                await mongo.LocationLogMongoModel.update({_id: existingData._id},
-                    {
-                        '$inc': {num: 1, accsum: deviceData.acc},
-                        'timeLast': new Date().getTime(),
-                        'updater': updater
-                    });
-                let updated = await mongo.LocationLogMongoModel.findOne({_id: existingData._id});
-                return Promise.resolve({
-                    geocodingResult: {locationData: updated.location, hungarianData: updated.hunData},
-                    id: updated._id.toString()
-                });
-            }
-            else {
-                let locationData = await this.reverseGeocodeWithCountryAsync(deviceData.latLon);
-                let saved = await LocationUpdater.saveNewLogToDatabase(updater, deviceData, locationData);
-                return Promise.resolve({geocodingResult: locationData, id: saved._id.toString()});
-            }
-
-        } catch (error) {
-            return Promise.reject(error);
+        const existingData = await mongo.LocationLogMongoModel.findOne({'did': {'$eq': deviceData.se.did}}).sort({'timeLast': -1});
+        if (!existingData) {
+            const locationData = await this.reverseGeocodeWithCountryAsync(deviceData.latLon);
+            const saved = await LocationUpdater.saveNewLogToDatabase(updater, deviceData, locationData);
+            return Promise.resolve({geocodingResult: locationData, id: saved._id.toString()});
         }
-
-
+        else if (geoUtils.getDistance(deviceData.latLon, existingData.latLon) < 0.1) {
+            await mongo.LocationLogMongoModel.update({_id: existingData._id},
+                {
+                    '$inc': {num: 1, accsum: deviceData.acc},
+                    'timeLast': Date.now(),
+                    'updater': updater
+                });
+            const updated = await mongo.LocationLogMongoModel.findOne({_id: existingData._id});
+            return Promise.resolve({
+                geocodingResult: {locationData: updated.location, hungarianData: updated.hunData},
+                id: updated._id.toString()
+            });
+        }
+        else {
+            const locationData = await this.reverseGeocodeWithCountryAsync(deviceData.latLon);
+            const saved = await LocationUpdater.saveNewLogToDatabase(updater, deviceData, locationData);
+            return Promise.resolve({geocodingResult: locationData, id: saved._id.toString()});
+        }
     }
 }
+
 export const locationUpdater: ILocationUpdater = new
 LocationUpdater(logger, grg.googleReverseGeoCoder, huRegReverseGeocoder);

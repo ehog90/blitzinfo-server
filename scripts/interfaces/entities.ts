@@ -590,5 +590,11 @@ export module Entities {
         results: GeocoderResult[],
         status: GeocoderStatus
     }
+
+    export interface IStationsFromWeb {
+        sId: number,
+        latLon: number[],
+        name: string
+    }
 }
 

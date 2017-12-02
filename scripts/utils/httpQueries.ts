@@ -42,5 +42,4 @@ export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): O
                 });
         request.end(JSON.stringify(message));
     });
-
 }

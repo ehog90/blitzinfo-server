@@ -33,7 +33,7 @@ class DatabaseSaver implements IDatabaseSaver {
     private setUpGeocoder(reverseGeoCoder: IReverseGeocoderService) {
         this.serverEventChannel = reverseGeoCoder.serverEventChannel;
         this.serverEventChannel.filter(x => x === 0)
-            .subscribe(event => this.onEventReceived());
+            .subscribe(() => this.onEventReceived());
         this.lastSavedStroke = reverseGeoCoder.lastGeocodedStroke;
         this.reverseGeoCoder.lastGeocodedStroke.subscribe(x => this.strokeGeoCoded(x));
     }

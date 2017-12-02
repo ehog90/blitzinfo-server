@@ -24,6 +24,7 @@
     "@types/websocket": "0.0.32",
     "body-parser": "^1.18.2",
     "cli-color": "^1.1.0",
+    "commander": "^2.12.2",
     "express": "^4.16.2",
     "geojson-utils": "^1.1.0",
     "getjson": "0.0.1",

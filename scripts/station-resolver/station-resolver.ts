@@ -21,21 +21,15 @@ class StationResolver implements IStationResolver {
         this.timer.subscribe(() => this.stationUpdateRequested());
 
         lightningMapsWebSocket.lastReceived.filter(stroke => !!stroke.sta).subscribe(stroke => {
-            for (const key in stroke.sta) {
-                if (stroke.sta.hasOwnProperty(key)) {
-                    const stationId: number = Number(key);
-                    const date = new Date(stroke.time);
-                    StationResolver.updateStationDetection(stationId, date);
-                }
-            }
-        })
-    }
+            const stations: number[] =
+                toPairs(stroke.sta).map(x => Number(x[0]));
 
-    private static updateStationDetection(station: number, date: Date) {
-        StationsMongoModel.update({sId: station}, {
-            "$inc": {detCnt: 1},
-            lastSeen: date
-        }, {upsert: true}).exec();
+            const bulk = StationsMongoModel.collection.initializeUnorderedBulkOp();
+            for (const station of stations) {
+                bulk.find({sId: station}).upsert().update({$inc: {detCnt: 1}, $set: {lastSeen: new Date(stroke.time)}});
+            }
+            bulk.execute();
+        })
     }
 
     private timer: Observable<TimeInterval<number>>;

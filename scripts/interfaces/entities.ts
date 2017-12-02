@@ -18,6 +18,7 @@ export module Entities {
     }
 
     export enum Environment {
+        DevUsingRealDB = "DEVREAL",
         Development = "DEV",
         Production = "PROD"
     }

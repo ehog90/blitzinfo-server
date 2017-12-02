@@ -2,6 +2,7 @@
 import {Entities} from "./interfaces/entities";
 import IConfig = Entities.IConfig;
 import Environment = Entities.Environment;
+import * as commander from "commander";
 
 
 export const config: IConfig = {
@@ -13,39 +14,29 @@ export const config: IConfig = {
     geoCodingDistanceThreshold: 15000,
     dbDupeCheckingTimeout: 60
 };
-export const initObject =  JSON.parse(fs.readFileSync("./init.json","utf8"));
+export const initObject = JSON.parse(fs.readFileSync("./init.json", "utf8"));
 
-if (process.argv.length === 5 || process.argv.length === 6) {
-    if (!isNaN(Number(process.argv[2]))) {
-        config.restPort = Number(process.argv[2]);
-    } else {
-        config.restPort = 5000;
-    }
+commander
+    .allowUnknownOption(true)
+    .option('-r, --rest-port <n>', 'Rest API port',"5000")
+    .option('-l, --live-port <n>', 'Live data port', "5001")
+    .option('-e, --environment [value]', 'environment',Environment.Production)
+    .option('-m, --mongo-path [value]', 'MongoDB path without mongodb://','127.0.0.1/blitzinfo')
+    .parse(process.argv);
 
-    if (!isNaN(Number(process.argv[3]))) {
-        config.socketIOPort = Number(process.argv[3]);
-    } else {
-        config.socketIOPort = 5001;
-    }
-
-    if (process.argv[4] === "DEV") {
+config.restPort = Number(commander.restPort);
+config.socketIOPort = Number(commander.livePort);
+switch (config.environment) {
+    case "DEV":
         config.environment = Environment.Development;
         config.lightningMapsUrl = "ws://localhost:4777";
-        if (process.argv.length === 6) {
-            config.mongoLink = `mongodb://${process.argv[5]}`;
-        } else {
-            config.mongoLink = "mongodb://192.168.1.22/blitzinfo_dev";
-        }
-    }
-
-    if (process.argv[4] === "DEVREAL") {
+        config.mongoLink = `mongodb://${commander.mongoPath}`;
+        break;
+    case "DEVREAL":
         config.environment = Environment.Development;
         config.lightningMapsUrl = "ws://localhost:4777";
-        if (process.argv.length === 6) {
-            config.mongoLink = `mongodb://${process.argv[5]}`;
-        } else {
-            config.mongoLink = "mongodb://192.168.1.22/blitzinfo_dev";
-        }
-
-    }
+        config.mongoLink = `mongodb://192.168.1.22/blitzinfo_dev`;
+        break;
+    default:
+        break;
 }

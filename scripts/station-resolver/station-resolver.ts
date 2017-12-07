@@ -19,7 +19,6 @@ class StationResolver implements IStationResolver {
         this.timer = Observable.timer(5000, StationResolver.tick)
             .timeInterval();
         this.timer.subscribe(() => this.stationUpdateRequested());
-
         lightningMapsWebSocket.lastReceived.filter(stroke => !!stroke.sta).subscribe(stroke => {
             const stations: number[] =
                 toPairs(stroke.sta).map(x => Number(x[0]));

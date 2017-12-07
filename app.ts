@@ -11,14 +11,15 @@ import {logger} from "./scripts/logger/logger";
 import * as http from "http";
 import * as path from "path";
 import {stationResolver} from "./scripts/station-resolver/station-resolver";
-import {config} from "./scripts/config";
+import {config, corsSettings} from "./scripts/config";
 import {Entities} from "./scripts/interfaces/entities";
 import IServerError = Entities.IServerError;
 import {authenticationMiddleware} from "./scripts/rest/authentication-middleware";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
-import {corsMiddleware} from "./scripts/rest/cors-middleware";
 import {customMorganLogger} from "./scripts/rest/morgan-logger";
 import {defaultRouter} from "./scripts/rest/router";
+import * as cors from 'cors';
+
 require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
@@ -37,7 +38,7 @@ app.use(morgan(':method :url :response-time :status :custom'));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(method_override());
-app.use(corsMiddleware);
+app.use(cors(corsSettings));
 app.use(authenticationMiddleware);
 app.use(defaultRouter);
 

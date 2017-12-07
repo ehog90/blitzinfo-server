@@ -14,6 +14,17 @@ export const config: IConfig = {
     geoCodingDistanceThreshold: 15000,
     dbDupeCheckingTimeout: 60
 };
+
+export const corsSettings = {
+    origin:  (origin, callback) =>  {
+        if (!origin || origin.endsWith("ehog.hu")) {
+            callback(null, true)
+        } else {
+            callback(new Error(`${origin}: this is not an allowed origin` ))
+        }
+    }
+};
+
 export const initObject = JSON.parse(fs.readFileSync("./init.json", "utf8"));
 
 commander

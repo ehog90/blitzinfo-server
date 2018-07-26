@@ -1,54 +1,44 @@
-﻿import * as fs from "fs";
+﻿import {loggerInstance as loggerInstance} from "../logger/loggerInstance";
+
+import * as fs from "fs";
+import {from, of as observableOf, timer, Observable, TimeInterval} from "rxjs";
+import {catchError, flatMap, map, merge, reduce, timeInterval} from "rxjs/operators";
+import {ILogger, IMetHuParser} from "../interfaces/modules";
+import * as mongo from "../mongo/mongoDbSchemas";
 import * as fcmUtils from "../utils/firebase";
 import {customHttpRequestAsync, getHttpRequestAsync} from "../utils/httpQueries";
-import * as mongo from "../mongo/mongoDbSchemas";
-import {logger} from "../logger/logger";
-import {Entities} from "../interfaces/entities";
-import {Modules} from "../interfaces/modules";
-import IMetHuData = Entities.IMetHuData;
-import ILogger = Modules.ILogger;
-import IDeviceLocationRecent = Entities.IDeviceLocationRecent;
-import IAlertArea = Entities.IAlertArea;
-import IFcmBase = Entities.IFcmBase;
-import IMeteoAlert = Entities.IMeteoAlert;
-import IMetHuEntityWithData = Entities.IMetHuEntityWithData;
-import HungarianAlertTypes = Entities.HungarianAlertTypes;
-import {Observable} from "rxjs/Observable";
-import {TimeInterval} from "rxjs/Rx";
-import MeteoEvents = Entities.MeteoEvents;
-const htmlparser2 = require("htmlparser2");
-/*
- Az OMSZ meteorológiai figyelmeztetéseit érkeztető, és kezelő osztály.  Bizonyos időközönként ellenőrzi a riasztásokat, amint a met.hu oldalról tölt le, majd kezeli azokat.
- Elküldi a Socket.IO osztálynak is, hohy az esetleges kliensek fogadhassák azokat. Szükség esetén figyelmezteti az eszközöket is.
- */
-class HungarianMeteoAlertsParser {
+import {
+    HungarianAlertTypes,
+    IAlertArea,
+    IDeviceLocationRecent,
+    IFcmBase, IMeteoAlert,
+    IMetHuData,
+    IMetHuEntityWithData, MeteoEvents
+} from "../interfaces/entities";
 
-    private timer: Observable<TimeInterval<number>>;
-    private metHuData: IMetHuData;
-    private countyHtmlParser: any;
-    private regionalUnitHtmlParser: any;
+const htmlparser2 = require("htmlparser2");
+
+class HungarianMeteoAlertsParser {
 
     constructor(private logger: ILogger, ticktime: number) {
         this.metHuData = <IMetHuData>(JSON.parse(fs.readFileSync('./static-json-data/metHuData.json', 'utf8')));
-        this.timer = Observable.timer(0, ticktime * 1000).timeInterval();
+        this.timer = timer(0, ticktime * 1000).pipe(timeInterval());
         this.timer.subscribe(x => this.onTimerTick());
 
         const countyHtmlHandler = new htmlparser2.DefaultHandler((error, dom: any) => {
             if (!error) {
                 const data = this.domToAlertArea(dom, HungarianAlertTypes.County);
                 this.save(data);
-            }
-            else {
+            } else {
                 this.logger.sendErrorMessage(0, 0, "met.hu parser", `Parse county handler error: ${error}`, false);
             }
         });
 
         const regionalUnitHtmlHandler = new htmlparser2.DefaultHandler((error, dom: any) => {
             if (!error) {
-                let data = this.domToAlertArea(dom, HungarianAlertTypes.RegionalUnit);
+                const data = this.domToAlertArea(dom, HungarianAlertTypes.RegionalUnit);
                 this.save(data);
-            }
-            else {
+            } else {
                 this.logger.sendErrorMessage(0, 0, "met.hu parser", `Parse regional unit handler error: ${error}`, false);
             }
         });
@@ -56,6 +46,11 @@ class HungarianMeteoAlertsParser {
         this.countyHtmlParser = new htmlparser2.Parser(countyHtmlHandler);
         this.regionalUnitHtmlParser = new htmlparser2.Parser(regionalUnitHtmlHandler);
     }
+
+    private timer: Observable<TimeInterval<number>>;
+    private metHuData: IMetHuData;
+    private countyHtmlParser: any;
+    private regionalUnitHtmlParser: any;
 
 
     private static async notify(locations: Array<IDeviceLocationRecent>, alertArea: IAlertArea) {
@@ -72,6 +67,48 @@ class HungarianMeteoAlertsParser {
             };
             await customHttpRequestAsync(fcmUtils.firebaseSettings, fcmBase).toPromise();
         }
+    }
+
+    private static getDataFromMetDotHu(code: number, type: HungarianAlertTypes): Observable<IMetHuEntityWithData> {
+        const linkType = type === HungarianAlertTypes.County ? "wbhx" : "wahx";
+        return getHttpRequestAsync(`http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`,
+            15000).pipe(
+            map(rawData => {
+                return {type: type, code: code, data: rawData};
+            }),
+            catchError(() => observableOf(null))
+        );
+    }
+
+    private static getAlertCode(event: string): MeteoEvents {
+        if (event === "Heves zivatar") {
+            return MeteoEvents.Thunder;
+        } else if (event === "Széllökés") {
+            return MeteoEvents.Wind;
+        } else if (event === "Ónos eső") {
+            return MeteoEvents.Sleet;
+        } else if (event === "Hófúvás") {
+            return MeteoEvents.SnowDrift;
+        } else if (event === "Eső") {
+            return MeteoEvents.Rain;
+        } else if (event === "Havazás") {
+            return MeteoEvents.Snow;
+        } else if (event === "Tartós, sűrű köd") {
+            return MeteoEvents.Fog;
+        } else if (event === "Talajmenti fagy") {
+            return MeteoEvents.SurfaceFrost;
+        } else if (event === "Hőség (25 fokos középh.)") {
+            return MeteoEvents.ExtremeHot25;
+        } else if (event === "Hőség (27 fokos középh.)") {
+            return MeteoEvents.ExtremeHot27;
+        } else if (event === "Hőség") {
+            return MeteoEvents.ExtremeHot;
+        } else if (event === "Extrém hideg") {
+            return MeteoEvents.ExtremeCold;
+        } else if (event === "Felhőszakadás") {
+            return MeteoEvents.Rainfall;
+        }
+        return MeteoEvents.Other;
     }
 
     private async save(alertArea: IAlertArea) {
@@ -97,12 +134,14 @@ class HungarianMeteoAlertsParser {
                     });
 
                     await strokeToInsert.save();
-                    if (alertArea.type === HungarianAlertTypes.County ) {
-                        const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.countyName': alertArea.name});
-                        await HungarianMeteoAlertsParser.notify(results, alertArea);
+                    if (alertArea.type === HungarianAlertTypes.County) {
+                        const countyResults = await mongo.LocationRecentMongoModel
+                            .find({'hunData.regionalData.countyName': alertArea.name});
+                        await HungarianMeteoAlertsParser.notify(countyResults, alertArea);
                     } else {
-                        const results = await mongo.LocationRecentMongoModel.find({'hunData.regionalData.regionalUnitName': alertArea.name});
-                        await HungarianMeteoAlertsParser.notify(results, alertArea);
+                        const ruResults = await mongo.LocationRecentMongoModel
+                            .find({'hunData.regionalData.regionalUnitName': alertArea.name});
+                        await HungarianMeteoAlertsParser.notify(ruResults, alertArea);
                     }
                 }
             });
@@ -136,23 +175,21 @@ class HungarianMeteoAlertsParser {
 
             dom[1].children.forEach(tablechild => {
                 if (tablechild.type === 'tag') {
-                    let alert: IMeteoAlert = {level: null, type: null};
+                    const alert: IMeteoAlert = {level: null, type: null};
                     let has = false;
                     tablechild.children.forEach(td => {
                         if (td.type === 'tag' && td.name === "td") {
                             if (td.attribs.class === "row1" || td.attribs.class === "row0") {
-                                if (td.children != undefined) {
+                                if (td.children !== undefined) {
                                     td.children.forEach(alertElem => {
                                         if (alertElem.type === "tag" && alertElem.name === "img") {
                                             if (alertElem.attribs.src === "/images/warningb/w1.gif") {
                                                 alert.level = 1;
                                                 has = true;
-                                            }
-                                            else if (alertElem.attribs.src === "/images/warningb/w2.gif") {
+                                            } else if (alertElem.attribs.src === "/images/warningb/w2.gif") {
                                                 alert.level = 2;
                                                 has = true;
-                                            }
-                                            else if (alertElem.attribs.src === "/images/warningb/w3.gif") {
+                                            } else if (alertElem.attribs.src === "/images/warningb/w3.gif") {
                                                 alert.level = 3;
                                                 has = true;
                                             }
@@ -179,32 +216,9 @@ class HungarianMeteoAlertsParser {
         }
     }
 
-    private static getDataFromMetDotHu(code: number, type: HungarianAlertTypes): Observable<IMetHuEntityWithData> {
-        const linkType = type === HungarianAlertTypes.County ? "wbhx" : "wahx";
-        return getHttpRequestAsync(`http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`, 15000)
-            .map(rawData => {return {type: type, code: code, data: rawData}})
-            .catch(() => Observable.of(null));
-    }
-
     private parseData(parser: any, entity: IMetHuEntityWithData) {
         parser.parseComplete(entity.data, result => {
         });
-    }
-    private static getAlertCode(event: string): MeteoEvents {
-        if (event === "Heves zivatar") return MeteoEvents.Thunder;
-        else if (event === "Széllökés") return MeteoEvents.Wind;
-        else if (event === "Ónos eső") return MeteoEvents.Sleet;
-        else if (event === "Hófúvás") return MeteoEvents.SnowDrift;
-        else if (event === "Eső") return MeteoEvents.Rain;
-        else if (event === "Havazás") return MeteoEvents.Snow;
-        else if (event === "Tartós, sűrű köd") return MeteoEvents.Fog;
-        else if (event === "Talajmenti fagy") return MeteoEvents.SurfaceFrost;
-        else if (event === "Hőség (25 fokos középh.)") return MeteoEvents.ExtremeHot25;
-        else if (event === "Hőség (27 fokos középh.)") return MeteoEvents.ExtremeHot27;
-        else if (event === "Hőség") return MeteoEvents.ExtremeHot;
-        else if (event === "Extrém hideg") return MeteoEvents.ExtremeCold;
-        else if (event === "Felhőszakadás") return MeteoEvents.Rainfall;
-        return MeteoEvents.Other;
     }
 
     public invoke(): void {
@@ -214,17 +228,41 @@ class HungarianMeteoAlertsParser {
     private async onTimerTick() {
 
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading county data`, false);
-        let countyResponses = await Observable.from(this.metHuData.counties).flatMap(county => HungarianMeteoAlertsParser.getDataFromMetDotHu(county, HungarianAlertTypes.County)).merge(4).reduce((acc, value) => {
-            acc.push(value);
-            return acc;
-        }, []).toPromise();
+        let countyResponses = await from(this.metHuData.counties).pipe(
+            flatMap(county => HungarianMeteoAlertsParser.getDataFromMetDotHu(county, HungarianAlertTypes.County)),
+            merge(4),
+            reduce((acc, value) => {
+                acc.push(value);
+                return acc;
+            }, [])
+        ).toPromise() as any[];
+        /* let countyResponses = await Observable.from(this.metHuData.counties)
+        .flatMap(county => HungarianMeteoAlertsParser.getDataFromMetDotHu(county, HungarianAlertTypes.County))
+        .merge(4).reduce((acc, value) => {
+             acc.push(value);
+             return acc;
+         }, []).toPromise();*/
+
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All county data downloaded: ${countyResponses.length}`, false);
         this.logger.sendNormalMessage(227, 16, "met.hu parser", `Downloading regional unit data`, false);
-        let ruResponses = await Observable.from(this.metHuData.regionalUnits).flatMap(ru => HungarianMeteoAlertsParser.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit)).merge(4).reduce((acc, value) => {
-            acc.push(value);
-            return acc;
-        }, []).toPromise();
-        this.logger.sendNormalMessage(227, 16, "met.hu parser", `All regional unit data downloaded: ${ruResponses.length}`, false);
+
+        let ruResponses = await from(this.metHuData.regionalUnits).pipe(
+            flatMap(ru => HungarianMeteoAlertsParser.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit)),
+            merge(4),
+            reduce((acc, value) => {
+                acc.push(value);
+                return acc;
+            }, []),
+        ).toPromise() as any[];
+
+
+        /* let ruResponses = await Observable.from(this.metHuData.regionalUnits).flatMap(ru =>
+        HungarianMeteoAlertsParser.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit))
+        .merge(4).reduce((acc, value) => {
+             acc.push(value);
+             return acc;
+         }, []).toPromise();
+         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All regional unit data downloaded: ${ruResponses.length}`, false);*/
 
         countyResponses = countyResponses.filter(x => x != null);
         ruResponses = ruResponses.filter(x => x != null);
@@ -235,4 +273,4 @@ class HungarianMeteoAlertsParser {
     }
 }
 
-export const metHuParser: Modules.IMetHuParser = new HungarianMeteoAlertsParser(logger, 90);
+export const metHuParser: IMetHuParser = new HungarianMeteoAlertsParser(loggerInstance, 90);

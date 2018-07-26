@@ -1,31 +1,37 @@
 ﻿import * as express from 'express';
+import {INearbyRequest} from "../interfaces/entities";
 import * as mongo from "../mongo/mongoDbSchemas";
-import* as geoUtils from "../utils/geo"
-import {Entities} from "../interfaces/entities";
-import INearbyTequest = Entities.INearbyTequest;
+import * as geoUtils from "../utils/geo";
 
 /*
     REST: 10 perces statisztikák bizonyos órára visszamenőleg.
 */
-export function nearbyStrokes(req: INearbyTequest, res: express.Response) {
+export async function nearbyStrokes(req: INearbyRequest, res: express.Response) {
     if (!isNaN(req.params.lat) && !isNaN(req.params.lon)) {
         const queryCoords: number[] = [Number(req.params.lon), Number(req.params.lat)];
-        mongo.TtlOneHourStrokeMongoModel.geoNear({ type: "Point", coordinates: [Number(req.params.lon), Number(req.params.lat)] },
-            { spherical: true, maxDistance: 100000, limit: 50000},
-            (err, dataWithDistance: any[]) => {
-                if (err) {
-                    res.json({ error: "DB_ERROR", data: null });
-                } else {
-                    const data = dataWithDistance.map(x => {
-                        return { latLon: x.obj.latLon, time: x.obj.time.getTime(), d: x.dis / 1000, br: geoUtils.getBearing(queryCoords, x.obj.latLon)}
-                    });
-                    res.json({ error: null, data: data });
+        const dataWithDistance: any[] = await mongo.TtlOneHourStrokeMongoModel.aggregate([
+            {
+                '$geoNear': {
+                    near: {type: "Point", coordinates: [Number(req.params.lon), Number(req.params.lat)]},
+                    spherical: true,
+                    maxDistance: 100000,
+                    distanceField: 'dist',
+                    limit: 50000
                 }
             }
-        );
+        ]);
+        const data = dataWithDistance.map(x => {
+            return {
+                latLon: x.obj.latLon,
+                time: x.obj.time.getTime(),
+                d: x.dist / 1000,
+                br: geoUtils.getBearing(queryCoords, x.obj.latLon)
+            };
+        });
+        res.json({error: null, data: data});
 
 
     } else {
-        res.json({ error: "WRONG_FORMAT", data: null });
+        res.json({error: "WRONG_FORMAT", data: null});
     }
 }

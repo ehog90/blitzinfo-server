@@ -1,26 +1,20 @@
-﻿/*
-    Földrajzi függvények (távolság, elhajlási szög, stb)
-*/
+﻿import {IGeoInformation, SunState} from "../interfaces/entities";
 
-
-import {Entities} from "../interfaces/entities";
-import IGeoInformation = Entities.IGeoInformation;
-import SunState = Entities.SunState;
 export function toRadians(num: number): number {
     return num * (Math.PI / 180);
 }
+
 export function toDegrees(num: number): number {
     return num * (180 / Math.PI);
 }
 
 export function isInDirection(dirs: number[], bearing: number): boolean {
-    if (dirs == undefined) {
+    if (dirs === undefined) {
         return true;
     }
     if (dirs.length === 0) {
         return true;
-    }
-    else {
+    } else {
         for (let i = 0; i < dirs.length; ++i) {
             if (bearing >= dirs[i] && bearing <= dirs[i] + 45) {
                 return true;
@@ -41,10 +35,11 @@ export function getBearing(start: number[], end: number[]): number {
     let dLong = endLong - startLong;
     const dPhi = Math.log(Math.tan(endLat / 2.0 + Math.PI / 4.0) / Math.tan(startLat / 2.0 + Math.PI / 4.0));
     if (Math.abs(dLong) > Math.PI) {
-        if (dLong > 0.0)
+        if (dLong > 0.0) {
             dLong = -(2.0 * Math.PI - dLong);
-        else
+        } else {
             dLong = (2.0 * Math.PI + dLong);
+        }
     }
 
     return (toDegrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
@@ -65,23 +60,36 @@ export function getDistance(start: number[], end: number[]) {
     return dist;
 }
 
-export function getSunState(elevation: number, azimuth: number) : SunState {
+export function getSunState(elevation: number, azimuth: number): SunState {
 
     if (azimuth > 0) {
-        if (elevation > 0.5) return SunState.Daytime;
-        else if (elevation <= 0.5 && elevation >= -0.5) return SunState.Sunset;
-        else if (elevation < -0.5 && elevation >= -6) return SunState.CivilTwilight;
-        else if (elevation < -6 && elevation >= -12) return SunState.NauticalTwilight;
-        else if (elevation < -12 && elevation >= -18) return SunState.AstronomicalTwilight;
-        else return SunState.Night;
-    }
-    else {
-        if (elevation > 0.5) return SunState.Daytime;
-        else if (elevation <= 0.5 && elevation >= -0.5) return SunState.Sunrise;
-        else if (elevation < -0.5 && elevation >= -6) return SunState.CivilTwilight;
-        else if (elevation < -6 && elevation >= -12) return SunState.NauticalTwilight;
-        else if (elevation < -12 && elevation >= -18) return SunState.AstronomicalTwilight;
-        else return SunState.Night;
+        if (elevation > 0.5) {
+            return SunState.Daytime;
+        } else if (elevation <= 0.5 && elevation >= -0.5) {
+            return SunState.Sunset;
+        } else if (elevation < -0.5 && elevation >= -6) {
+            return SunState.CivilTwilight;
+        } else if (elevation < -6 && elevation >= -12) {
+            return SunState.NauticalTwilight;
+        } else if (elevation < -12 && elevation >= -18) {
+            return SunState.AstronomicalTwilight;
+        } else {
+            return SunState.Night;
+        }
+    } else {
+        if (elevation > 0.5) {
+            return SunState.Daytime;
+        } else if (elevation <= 0.5 && elevation >= -0.5) {
+            return SunState.Sunrise;
+        } else if (elevation < -0.5 && elevation >= -6) {
+            return SunState.CivilTwilight;
+        } else if (elevation < -6 && elevation >= -12) {
+            return SunState.NauticalTwilight;
+        } else if (elevation < -12 && elevation >= -18) {
+            return SunState.AstronomicalTwilight;
+        } else {
+            return SunState.Night;
+        }
     }
 }
 

@@ -1,33 +1,30 @@
-﻿import * as geoUtils from "../utils/geo";
+﻿import {loggerInstance} from "../logger/loggerInstance";
+
+import {Subject} from "rxjs";
+import {databaseSaverInstance} from "../databaseSaver/databaseSaverInstance";
+import {
+    IDeviceLocationRecent,
+    IFcmStrokeLastLocation, IFcmStrokeSavedLocation,
+    ISavedLocation,
+    IStroke,
+    IStrokeWithDistance, IStrokeWithSavedLocation
+} from "../interfaces/entities";
+import {IDatabaseSaver, IFirebaseService, ILogger} from "../interfaces/modules";
 import * as mongo from "../mongo/mongoDbSchemas";
-import {databaseSaver} from "../databaseSaver/databaseSaver";
-import {logger} from "../logger/logger";
-import {customHttpRequestAsync} from "../utils/httpQueries";
 import {firebaseSettings} from "../utils/firebase";
-import {Entities} from "../interfaces/entities";
-import {Modules} from "../interfaces/modules";
-import IStroke = Entities.IStroke;
-import ISavedLocation = Entities.ISavedLocation;
-import IStrokeWithSavedLocation = Entities.IStrokeWithSavedLocation;
-import IFcmStrokeSavedLocation = Entities.IFcmStrokeSavedLocation;
-import IDeviceLocationRecent = Entities.IDeviceLocationRecent;
-import IStrokeWithDistance = Entities.IStrokeWithDistance;
-import IFcmStrokeLastLocation = Entities.IFcmStrokeLastLocation;
-import ILogger = Modules.ILogger;
-import IDatabaseSaver = Modules.IDatabaseSaver;
-import IFirebaseService = Modules.IFirebaseService;
-import {Subject} from "rxjs/Subject";
+import * as geoUtils from "../utils/geo";
+import {customHttpRequestAsync} from "../utils/httpQueries";
 
 class FirebaseService implements IFirebaseService {
-    private lastDataFromDatabase: Subject<IStroke>;
-    private static NOTIF_TIMEOUT: number = 1000 * 60 * 60;
-    private static DEVICE_TIMEOUT: number = 1000 * 60 * 60;
 
 
     constructor(private logger: ILogger, databaseSaver: IDatabaseSaver) {
         this.lastDataFromDatabase = databaseSaver.lastSavedStroke;
         this.lastDataFromDatabase.subscribe(stroke => this.strokeReceived(stroke));
     }
+    private static NOTIF_TIMEOUT: number = 1000 * 60 * 60;
+    private static DEVICE_TIMEOUT: number = 1000 * 60 * 60;
+    private lastDataFromDatabase: Subject<IStroke>;
 
     /* ha a távolság nagyobb, mint 51, akkor az értéke 999 lesz, ha 20 és 50 között, 20, ha annál kisebb, 0.*/
     private static getNotificationClass(distance: number): number {
@@ -48,6 +45,62 @@ class FirebaseService implements IFirebaseService {
             locationData: stroke.locationData
         };
 
+    }
+
+    private static async updateDatabaseAndNotifyForCurrentLocations(device: IDeviceLocationRecent,
+                                                                    strokeWithDistance: IStrokeWithDistance) {
+
+        const trimmedStroke = FirebaseService.getTrimmedStroke(strokeWithDistance.s);
+        await mongo.LocationRecentMongoModel.update(
+            {
+                'did': device.did
+            },
+            {
+                'lastInAlertZone': trimmedStroke.time,
+                'lastAlert': strokeWithDistance
+            });
+        await mongo.LocationLogMongoModel.update({'_id': device.lastLogId},
+            {'$push': {alerts: trimmedStroke}});
+
+        const fcmMessage: IFcmStrokeLastLocation = {
+            time_to_live: 300,
+            registration_ids: [device.did],
+            data: {
+                message: {
+                    mtype: "STROKE",
+                    data: strokeWithDistance,
+                }
+            }
+        };
+        await customHttpRequestAsync(firebaseSettings, fcmMessage).toPromise();
+    }
+
+    private static async updateDatabaseForRecentLocation(device: IDeviceLocationRecent,
+                                                         strokeWithDistance: IStrokeWithDistance) {
+        await mongo.LocationRecentMongoModel.update(
+            {
+                'did': device.did
+            },
+            {
+                'lastInAlertZone': strokeWithDistance.s.time
+            },
+            () => {
+
+            });
+    }
+
+    private static async updateDatabaseForSavedLocation(savedLocation: ISavedLocation,
+                                                        strokeWithDistance: IStrokeWithSavedLocation) {
+        await mongo.SavedLocationMongoModel.update(
+            {
+                '_id': savedLocation._id
+            },
+            {
+                'lastInAlertZone': strokeWithDistance.s.time
+            },
+            () => {
+
+            });
     }
 
 
@@ -81,70 +134,13 @@ class FirebaseService implements IFirebaseService {
                         }
                     }
                 };
-                await customHttpRequestAsync(firebaseSettings, fcmMessage).toPromise()
+                await customHttpRequestAsync(firebaseSettings, fcmMessage).toPromise();
             });
 
+
+        } catch (error) {
 
         }
-        catch (error) {
-
-        }
-    }
-
-    private static async updateDatabaseAndNotifyForCurrentLocations(device: IDeviceLocationRecent,
-                                                                    strokeWithDistance: IStrokeWithDistance) {
-
-        const trimmedStroke = FirebaseService.getTrimmedStroke(strokeWithDistance.s);
-        await mongo.LocationRecentMongoModel.update(
-            {
-                'did': device.did
-            },
-            {
-                'lastInAlertZone': trimmedStroke.time,
-                'lastAlert': strokeWithDistance
-            });
-        await mongo.LocationLogMongoModel.update({'_id': device.lastLogId},
-            {'$push': {alerts: trimmedStroke}});
-
-        const fcmMessage: IFcmStrokeLastLocation = {
-            time_to_live: 300,
-            registration_ids: [device.did],
-            data: {
-                message: {
-                    mtype: "STROKE",
-                    data: strokeWithDistance,
-                }
-            }
-        };
-        await customHttpRequestAsync(firebaseSettings, fcmMessage).toPromise()
-    }
-
-    private static async updateDatabaseForRecentLocation(device: IDeviceLocationRecent,
-                                                         strokeWithDistance: IStrokeWithDistance) {
-        await mongo.LocationRecentMongoModel.update(
-            {
-                'did': device.did
-            },
-            {
-                'lastInAlertZone': strokeWithDistance.s.time
-            },
-            () => {
-
-            });
-    }
-
-    private static async updateDatabaseForSavedLocation(savedLocation: ISavedLocation,
-                                                        strokeWithDistance: IStrokeWithSavedLocation) {
-        await mongo.SavedLocationMongoModel.update(
-            {
-                '_id': savedLocation._id
-            },
-            {
-                'lastInAlertZone': strokeWithDistance.s.time
-            },
-            () => {
-
-            });
     }
 
     private async checkRecentLocations(stroke: IStroke) {
@@ -178,8 +174,7 @@ class FirebaseService implements IFirebaseService {
             ]);
 
         await devices.forEach(async device => {
-            const strokeWithDistance: IStrokeWithDistance =
-                {
+            const strokeWithDistance: IStrokeWithDistance = {
                     s: stroke,
                     dist: device.dist,
                     nc: FirebaseService.getNotificationClass(device.dist),
@@ -230,8 +225,7 @@ class FirebaseService implements IFirebaseService {
 
 
         savedLocations.forEach(async savedLocation => {
-            const strokeWithSavedLocation: IStrokeWithSavedLocation =
-                {
+            const strokeWithSavedLocation: IStrokeWithSavedLocation = {
                     s: stroke,
                     dist: savedLocation.dist,
                     nc: FirebaseService.getNotificationClass(savedLocation.dist),
@@ -270,4 +264,4 @@ class FirebaseService implements IFirebaseService {
     }
 }
 
-export const firebaseService: IFirebaseService = new FirebaseService(logger, databaseSaver);
+export const firebaseService: IFirebaseService = new FirebaseService(loggerInstance, databaseSaverInstance);

@@ -1,25 +1,29 @@
-/**
- * Created by ehog on 2016. 11. 11..
- */
-import * as json from "../utils/httpQueries";
-import {logger} from "../logger/logger";
+import {loggerInstance} from "../logger/loggerInstance";
+
+import {toPairs} from 'lodash';
+import {from, of as observableOf, timer, Observable, TimeInterval} from "rxjs";
+import {catchError, filter, flatMap, map, merge, reduce, timeInterval} from "rxjs/operators";
+import {IStationsFromWeb} from "../interfaces/entities";
+import {IStationResolver} from "../interfaces/modules";
+import {lightningMapsWebSocketInstance} from "../lightningMaps/lightningMaps";
 import {StationsMongoModel} from "../mongo/mongoDbSchemas";
-import {lightningMapsWebSocket} from "../lightningMaps/lightningMaps";
-import {Modules} from "../interfaces/modules";
-import {Observable} from "rxjs/Observable";
-import {TimeInterval} from "rxjs/Rx";
-import IStationResolver = Modules.IStationResolver;
-import {Entities} from "../interfaces/entities";
 import {remoteMongoReverseGeocoderAsync} from "../reverseGeocoderAndSun/remote-mongo-reverse-geocoder";
-import {toPairs} from 'lodash'
-import IStationsFromWeb = Entities.IStationsFromWeb;
+import * as json from "../utils/httpQueries";
 
 class StationResolver implements IStationResolver {
-    start(): void {
-        this.timer = Observable.timer(5000, StationResolver.tick)
-            .timeInterval();
+    private static tick = 1000 * 60 * 60 * 2;
+    private static jsonUrls = [
+        "http://www.lightningmaps.org/blitzortung/europe/index.php?stations_json",
+        "http://www.lightningmaps.org/blitzortung/america/index.php?stations_json",
+        "http://www.lightningmaps.org/blitzortung/oceania/index.php?stations_json"];
+
+    private timer: Observable<TimeInterval<number>>;
+
+    public start(): void {
+        this.timer = timer(5000, StationResolver.tick)
+            .pipe(timeInterval());
         this.timer.subscribe(() => this.stationUpdateRequested());
-        lightningMapsWebSocket.lastReceived.filter(stroke => !!stroke.sta).subscribe(stroke => {
+        lightningMapsWebSocketInstance.lastReceived.pipe(filter(stroke => !!stroke.sta)).subscribe(stroke => {
             const stations: number[] =
                 toPairs(stroke.sta).map(x => Number(x[0]));
 
@@ -28,33 +32,31 @@ class StationResolver implements IStationResolver {
                 bulk.find({sId: station}).upsert().update({$inc: {detCnt: 1}, $set: {lastSeen: new Date(stroke.time)}});
             }
             bulk.execute();
-        })
+        });
     }
 
-    private timer: Observable<TimeInterval<number>>;
-    private static tick = 1000 * 60 * 60 * 2;
-    private static jsonUrls = [
-        "http://www.lightningmaps.org/blitzortung/europe/index.php?stations_json",
-        "http://www.lightningmaps.org/blitzortung/america/index.php?stations_json",
-        "http://www.lightningmaps.org/blitzortung/oceania/index.php?stations_json"];
-
     private async stationUpdateRequested() {
-        const stationsFromWeb: IStationsFromWeb[] = await Observable.from(StationResolver.jsonUrls).flatMap(url =>
-            json.getHttpRequestAsync<any>(`${url}&${Math.random() % 420}`, 1500)
-                .catch(x => Observable.of<any>({})))
-            .map(x => toPairs(x).map((y: any) => {
+        const stationsFromWeb: IStationsFromWeb[] = await from(StationResolver.jsonUrls).pipe(
+            flatMap(url =>
+                json.getHttpRequestAsync<any>(`${url}&${Math.random() % 420}`, 1500).pipe(
+                    catchError(x => observableOf<any>({}))),
+            ),
+            map(x => toPairs(x).map((y: any) => {
                 return {
                     latLon: [y[1][1], y[1][0]],
                     name: y[1].c,
                     sId: Number(y[0])
-                }
-            }))
-            .merge(1).reduce((acc: IStationsFromWeb[], value: IStationsFromWeb[]) => acc.concat(value), []).toPromise();
+                };
+            })),
+            merge(1),
+            reduce((acc: IStationsFromWeb[], value: IStationsFromWeb[]) => acc.concat(value), [])
+        ).toPromise() as IStationsFromWeb[];
 
-        logger.sendNormalMessage(0, 0, "Stations", `${stationsFromWeb.length} station data downloaded, updating station metadata for all stations`, false);
+        loggerInstance.sendNormalMessage(0, 0,
+            "Stations", `${stationsFromWeb.length} station data downloaded, updating station metadata for all stations`, false);
 
         for (const stationData of stationsFromWeb) {
-            let stationGeoInformation = await remoteMongoReverseGeocoderAsync.getGeoInformation(stationData.latLon);
+            const stationGeoInformation = await remoteMongoReverseGeocoderAsync.getGeoInformation(stationData.latLon);
             await StationsMongoModel.update({sId: stationData.sId}, {
                 latLon: stationData.latLon,
                 name: stationData.name,
@@ -62,8 +64,8 @@ class StationResolver implements IStationResolver {
             }, {upsert: true}).exec();
         }
 
-        logger.sendNormalMessage(0, 0, `Stations`, `Station metadata updated.`, false);
+        loggerInstance.sendNormalMessage(0, 0, `Stations`, `Station metadata updated.`, false);
     }
 }
 
-export const stationResolver: Modules.IStationResolver = new StationResolver();
+export const stationResolver: IStationResolver = new StationResolver();

@@ -1,18 +1,13 @@
-﻿import * as mongo from "../mongo/mongoDbSchemas";
-import {logger} from "../logger/logger";
-import {reverseGeocoderService} from "../reverseGeocoderAndSun/reverseGeocoderService";
-import {logMongoErrors} from "../mongo-error-handling/mongo-error-handling";
-import {Modules} from "../interfaces/modules";
-import {Entities} from "../interfaces/entities";
-import {Subject} from "rxjs/Subject";
-import {Observable, TimeInterval} from "rxjs/Rx";
-import {Subscription} from "rxjs/Subscription";
+﻿import {timer, Observable, Subject, Subscription, TimeInterval} from "rxjs";
+import {filter, take, timeInterval} from "rxjs/operators";
 import {config} from "../config";
-import IDatabaseSaver = Modules.IDatabaseSaver;
-import IReverseGeocoderService = Modules.IReverseGeoCoderService;
-import ILogger = Modules.ILogger;
-import IStroke = Entities.IStroke;
-import IStrokeDocument = Entities.IStrokeDocument;
+import {IStroke} from "../interfaces/entities";
+import {IDatabaseSaver, ILogger, IReverseGeoCoderService} from "../interfaces/modules";
+import {loggerInstance} from "../logger/loggerInstance";
+import {logMongoErrors} from "../mongo-error-handling/mongo-error-handling";
+import * as mongo from "../mongo/mongoDbSchemas";
+import {reverseGeocoderService} from "../reverseGeocoderAndSun/reverseGeocoderService";
+
 
 /* Adatbázisba mentő osztály.
  A bemeneti adatok aszinkron módon érkeznek a geokódoló osztályból (reverseGeocoder.lastGeocodedStroke)
@@ -25,15 +20,16 @@ class DatabaseSaver implements IDatabaseSaver {
     private timerSubscription: Subscription;
 
     constructor(private logger: ILogger,
-                private reverseGeoCoder: IReverseGeocoderService) {
+                private reverseGeoCoder: IReverseGeoCoderService) {
         this.setUpGeocoder(reverseGeoCoder);
         this.lastSavedStroke = new Subject<IStroke>();
     }
 
-    private setUpGeocoder(reverseGeoCoder: IReverseGeocoderService) {
+    private setUpGeocoder(reverseGeoCoder: IReverseGeoCoderService) {
         this.serverEventChannel = reverseGeoCoder.serverEventChannel;
-        this.serverEventChannel.filter(x => x === 0)
-            .subscribe(() => this.onEventReceived());
+        this.serverEventChannel.pipe(
+            filter(x => x === 0)
+        ).subscribe(() => this.onEventReceived());
         this.lastSavedStroke = reverseGeoCoder.lastGeocodedStroke;
         this.reverseGeoCoder.lastGeocodedStroke.subscribe(x => this.strokeGeoCoded(x));
     }
@@ -50,18 +46,17 @@ class DatabaseSaver implements IDatabaseSaver {
                     `Stroke is dupe: ${stroke.blitzortungId}`,
                     true);
             });
-        }
-        else {
+        } else {
             this.saveStroke(stroke);
         }
     }
 
     private saveStroke(stroke: IStroke) {
-        let strokeToInsert = new mongo.AllStrokeMongoModel(stroke);
-        let strokeToInsertTtlTenMin = new mongo.TtlTenMinStrokeMongoModel(stroke);
-        let strokeToInsertTtlOneHour = new mongo.TtlOneHourStrokeMongoModel(stroke);
+        const strokeToInsert = new mongo.AllStrokeMongoModel(stroke);
+        const strokeToInsertTtlTenMin = new mongo.TtlTenMinStrokeMongoModel(stroke);
+        const strokeToInsertTtlOneHour = new mongo.TtlOneHourStrokeMongoModel(stroke);
         strokeToInsert.save().then(savedStroke => {
-            this.updateStatistics(<IStroke>savedStroke.toObject());
+            this.updateStatistics(<IStroke>savedStroke);
             strokeToInsertTtlTenMin.save(error => logMongoErrors(error));
             strokeToInsertTtlOneHour.save(error => logMongoErrors(error));
         });
@@ -95,16 +90,19 @@ class DatabaseSaver implements IDatabaseSaver {
     }
 
     private initializeTimer(): void {
-        this.dupeCheckerTimeoutTimer = Observable.timer(config.dbDupeCheckingTimeout * 1000,
-            config.dbDupeCheckingTimeout * 1000)
-            .timeInterval();
-        this.timerSubscription = this.dupeCheckerTimeoutTimer.take(1).subscribe(x => this.unlockDupeChecker());
+        this.dupeCheckerTimeoutTimer = timer(config.dbDupeCheckingTimeout * 1000,
+            config.dbDupeCheckingTimeout * 1000).pipe(
+            timeInterval()
+        );
+        this.timerSubscription = this.dupeCheckerTimeoutTimer.pipe(
+            take(1)
+        ).subscribe(x => this.unlockDupeChecker());
     }
 
     private unlockDupeChecker() {
         this.isDupeChecking = false;
-        this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking ended.', false)
-    };
+        this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking ended.', false);
+    }
 
     private enableDupeChecking(): void {
         this.isDupeChecking = true;
@@ -117,5 +115,5 @@ class DatabaseSaver implements IDatabaseSaver {
     }
 }
 
-export const databaseSaver: IDatabaseSaver = new DatabaseSaver(logger, reverseGeocoderService);
+export const databaseSaverInstance: IDatabaseSaver = new DatabaseSaver(loggerInstance, reverseGeocoderService);
 

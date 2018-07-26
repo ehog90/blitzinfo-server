@@ -1,8 +1,6 @@
-﻿import * as fs from "fs"
-import {Entities} from "./interfaces/entities";
-import IConfig = Entities.IConfig;
-import Environment = Entities.Environment;
-import * as commander from "commander";
+﻿import * as commander from "commander";
+import * as fs from "fs";
+import {Environment, IConfig} from "./interfaces/entities";
 
 
 export const config: IConfig = {
@@ -17,10 +15,10 @@ export const config: IConfig = {
 
 export const corsSettings = {
     origin:  (origin, callback) =>  {
-        if (!origin || origin.endsWith("ehog.hu")) {
-            callback(null, true)
+        if (!origin || origin.endsWith("ehog.hu") || origin.startsWith('http://localhost')) {
+            callback(null, true);
         } else {
-            callback(new Error(`${origin}: this is not an allowed origin` ))
+            callback(new Error(`${origin}: this is not an allowed origin` ));
         }
     }
 };
@@ -29,10 +27,10 @@ export const initObject = JSON.parse(fs.readFileSync("./init.json", "utf8"));
 
 commander
     .allowUnknownOption(true)
-    .option('-r, --rest-port <n>', 'Rest API port',"5000")
+    .option('-r, --rest-port <n>', 'Rest API port', "5000")
     .option('-l, --live-port <n>', 'Live data port', "5001")
-    .option('-e, --environment [value]', 'environment',Environment.Production)
-    .option('-m, --mongo-path [value]', 'MongoDB path without mongodb://','127.0.0.1/blitzinfo')
+    .option('-e, --environment [value]', 'environment', Environment.Production)
+    .option('-m, --mongo-path [value]', 'MongoDB path without mongodb://', '127.0.0.1/blitzinfo')
     .parse(process.argv);
 
 config.restPort = Number(commander.restPort);

@@ -1,39 +1,39 @@
-﻿//Imports.
-import * as morgan from "morgan";
+﻿// Imports.
 import * as bodyParser from "body-parser";
+import * as morgan from "morgan";
 const mongoose = require('mongoose');
-import * as method_override from "method-override";
+import * as cors from 'cors';
 import * as express from "express";
-import {lightningMapsWebSocket} from "./scripts/lightningMaps/lightningMaps";
-import {socketIoServer} from "./scripts/socketIoServer/socketIoServer";
-import {firebaseService} from "./scripts/firebase/firebaseService";
-import {logger} from "./scripts/logger/logger";
 import * as http from "http";
+import * as method_override from "method-override";
 import * as path from "path";
-import {stationResolver} from "./scripts/station-resolver/station-resolver";
 import {config, corsSettings} from "./scripts/config";
-import {Entities} from "./scripts/interfaces/entities";
-import IServerError = Entities.IServerError;
-import {authenticationMiddleware} from "./scripts/rest/authentication-middleware";
+import {firebaseService} from "./scripts/firebase/firebaseService";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
+
+import {loggerInstance} from "./scripts/logger/loggerInstance";
+
+import {IServerError} from "./scripts/interfaces/entities";
+import {lightningMapsWebSocketInstance} from "./scripts/lightningMaps/lightningMaps";
+import {authenticationMiddleware} from "./scripts/rest/authentication-middleware";
 import {customMorganLogger} from "./scripts/rest/morgan-logger";
 import {defaultRouter} from "./scripts/rest/router";
-import * as cors from 'cors';
+import {socketIoServer} from "./scripts/socketIoServer/socketIoServer";
+import {stationResolver} from "./scripts/station-resolver/station-resolver";
 
 require('./scripts/mongo/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
-mongoose.connect(config.mongoLink, {poolSize: 3, useMongoClient: true}, (error) => {
+mongoose.connect(config.mongoLink, {poolSize: 3}, (error) => {
     if (error) {
         console.error(`Failed to connect to the database ${config.mongoLink}: ${error}`);
         process.exit(1);
-    }
-    else {
+    } else {
         console.error(`Mongoose connected to MongoDB:  ${config.mongoLink}}`);
     }
 });
 const app = express();
-morgan.token('custom',customMorganLogger);
+morgan.token('custom', customMorganLogger);
 app.use(morgan(':method :url :response-time :status :custom'));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -45,14 +45,14 @@ app.use(defaultRouter);
 const server = http.createServer(app);
 server.listen(config.restPort);
 server.on("error", (error: IServerError) => {
-    logger.sendErrorMessage(0, 0, "REST API Server error", JSON.stringify(error), false);
+    loggerInstance.sendErrorMessage(0, 0, "REST API Server error", JSON.stringify(error), false);
     if (error.code === "EADDRINUSE") {
-        logger.sendErrorMessage(0, 0, "REST API Server error", `Fatal error, the port ${error.port} is in use.`, false);
+        loggerInstance.sendErrorMessage(0, 0, "REST API Server error", `Fatal error, the port ${error.port} is in use.`, false);
         process.exit(1);
     }
 });
-logger.sendNormalMessage(40, 16, "Configuration", JSON.stringify(config), false);
-lightningMapsWebSocket.start();
+loggerInstance.sendNormalMessage(40, 16, "Configuration", JSON.stringify(config), false);
+lightningMapsWebSocketInstance.start();
 metHuParser.invoke();
 socketIoServer.invoke();
 stationResolver.start();

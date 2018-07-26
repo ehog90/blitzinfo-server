@@ -1,19 +1,10 @@
-﻿import * as fs from 'fs';
-import * as clicolor from 'cli-color';
+﻿import * as clicolor from 'cli-color';
+import * as fs from 'fs';
+import * as moment from 'moment';
+import {Subject} from "rxjs";
+import {ILogger} from "../interfaces/modules";
 import * as mongo from "../mongo/mongoDbSchemas";
-import * as moment from 'moment'
-import {Modules} from "../interfaces/modules";
-import ILogger = Modules.ILogger;
-import {Entities} from "../interfaces/entities";
-import ILog = Entities.ILog;
-import ILogDocument = Entities.ILogDocument;
-import LogType = Entities.LogType;
-import {Subject} from "rxjs/Subject";
-
-/*
-A rendszer eseményeinek kiírásáért, naplzásáért felelős osztály. A figyelmeztetések publikus metódusokon keresztül érkeznek be, amiket elment az adatbázisba,
-illetve továbbít a Socket.IO kapcsolatokért felelős osztálynak is, hogy az esetleges kliensek fogadhassák azt.
-*/
+import {ILog, LogType} from "../interfaces/entities";
 
 class Logger implements ILogger {
     private xtermData: any;
@@ -26,11 +17,14 @@ class Logger implements ILogger {
         if (!message.canBeHidden || !this.canHideSome) {
             const msg = clicolor.xterm(message.colors.fg).bgXterm(message.colors.bg);
             if (message.messageParts.msgType === LogType.Normal) {
-                console.log(msg(`LOG [${moment(message.time).format("MM.DD HH:mm:ss:SSS")}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
+                console.log(msg(`LOG [${moment(message.time)
+                    .format("MM.DD HH:mm:ss:SSS")}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
             } else if (message.messageParts.msgType === LogType.Warning) {
-                console.warn(msg(`WARN [${moment(message.time).format("MM.DD HH:mm:ss:SSS")}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
+                console.warn(msg(`WARN [${moment(message.time)
+                    .format("MM.DD HH:mm:ss:SSS")}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
             } else if (message.messageParts.msgType === LogType.Error) {
-                console.error(msg(`ERROR [${moment(message.time).format("MM.DD HH:mm:ss:SSS")}}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
+                console.error(msg(`ERROR [${moment(message.time)
+                    .format("MM.DD HH:mm:ss:SSS")}}] [${message.messageParts.tag}] [${message.messageParts.msg.toString() }]`));
             }
         }
     }
@@ -116,4 +110,4 @@ class Logger implements ILogger {
     }
 }
 
-export const logger: Modules.ILogger = new Logger(false);
+export const loggerInstance: ILogger = new Logger(false);

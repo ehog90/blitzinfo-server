@@ -1,6 +1,5 @@
 ﻿import * as express from 'express';
-import {Entities} from "../interfaces/entities";
-import IFlagsRequest = Entities.IFlagsRequest;
+import {IFlagsRequest} from "../interfaces/entities";
 
 /*
 REST API-k hibakezelése.

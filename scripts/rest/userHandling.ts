@@ -1,12 +1,13 @@
 ﻿import * as express from 'express';
 import * as mongoose from 'mongoose';
+import {
+    IUserDocument,
+    IUserLoginRequest,
+    IUserLoginResponse,
+    IUserRegistrationRequest,
+    IUserRegistrationResponse
+} from "../interfaces/entities";
 import * as mongo from "../mongo/mongoDbSchemas";
-import {Entities} from "../interfaces/entities";
-import IUserLoginRequest = Entities.IUserLoginRequest;
-import IUserLoginResponse = Entities.IUserLoginResponse;
-import IUserRegistrationRequest = Entities.IUserRegistrationRequest;
-import IUserRegistrationResponse = Entities.IUserRegistrationResponse;
-import IUserDocument = Entities.IUserDocument;
 
 const emailRegexp: RegExp = /^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,10})$/;
 const userNameRegexp: RegExp = /^[_a-zA-Z0-9-]+$/;
@@ -16,14 +17,17 @@ export function login(req: express.Request, res: express.Response) {
     const reqOwn = <IUserLoginRequest>req;
     let response: IUserLoginResponse;
     try {
-        if (reqOwn.body.uname != undefined && reqOwn.body.pass != undefined) {
+        if (reqOwn.body.uname !== undefined && reqOwn.body.pass !== undefined) {
             response = {
                 errors: [],
                 event: "LOGIN"
             };
             response.errors = validateUserLogin(reqOwn);
             if (response.errors.length === 0) {
-                mongo.UserMongoModel.findOne({ "userName": reqOwn.body.uname, "password": reqOwn.body.pass }).exec((error, userData) => {
+                mongo.UserMongoModel.findOne({
+                    "userName": reqOwn.body.uname,
+                    "password": reqOwn.body.pass
+                }).exec((error, userData) => {
                     if (!error) {
                         if (userData != null) {
                             const mongooseId = new mongoose.Types.ObjectId();
@@ -33,7 +37,16 @@ export function login(req: express.Request, res: express.Response) {
                                 sessionId: mongooseId.toString()
                             };
                             res.json(response);
-                            mongo.UserMongoModel.update({ '_id': userData._id }, { "$push": { 'logIns': { _id: mongooseId, userAgent: req.headers['user-agent'], ip: req.ip, time: new Date() } } }).exec((error, status) => {
+                            mongo.UserMongoModel.update({'_id': userData._id}, {
+                                "$push": {
+                                    'logIns': {
+                                        _id: mongooseId,
+                                        userAgent: req.headers['user-agent'],
+                                        ip: req.ip,
+                                        time: new Date()
+                                    }
+                                }
+                            }).exec((_1, _2) => {
                             });
                         } else {
                             response.errors.push("LOGIN_FAILED");
@@ -45,8 +58,7 @@ export function login(req: express.Request, res: express.Response) {
                         res.json(response);
                     }
                 });
-            }
-            else {
+            } else {
                 res.end(JSON.stringify(response));
             }
 
@@ -77,6 +89,7 @@ function validateUserRegister(request: IUserRegistrationRequest): string[] {
     }
     return errors;
 }
+
 /*
     Felhasználói bejelentkezés szerver oldali validációja.
 */
@@ -87,13 +100,14 @@ function validateUserLogin(request: IUserLoginRequest): string[] {
     }
     return errors;
 }
+
 /*
     REST: Regisztráció.
 */
 export function register(req: IUserRegistrationRequest, res: express.Response) {
     try {
         let response: IUserRegistrationResponse;
-        if (req.body.email != undefined && req.body.pass != undefined && req.body.uname != undefined) {
+        if (req.body.email !== undefined && req.body.pass !== undefined && req.body.uname !== undefined) {
             req.body.email = req.body.email.toLowerCase();
             response = {
                 errors: [],
@@ -104,7 +118,7 @@ export function register(req: IUserRegistrationRequest, res: express.Response) {
             if (response.errors.length === 0) {
                 mongo.UserMongoModel.findOne({
                     "$or": [
-                        { "userName": req.body.uname }, { "email": req.body.email }
+                        {"userName": req.body.uname}, {"email": req.body.email}
                     ]
                 }).exec((error, userData: IUserDocument) => {
                     if (!error) {
@@ -115,9 +129,9 @@ export function register(req: IUserRegistrationRequest, res: express.Response) {
                                 email: req.body.email,
                                 password: req.body.pass
                             });
-                            userToInsert.save((error, saved: IUserDocument) => {
+                            userToInsert.save((_error, saved: IUserDocument) => {
                                 if (!error) {
-                                    response.userData = { userId: saved._id.toString() };
+                                    response.userData = {userId: saved._id.toString()};
                                     res.end(JSON.stringify(response));
 
                                 } else {
@@ -147,6 +161,6 @@ export function register(req: IUserRegistrationRequest, res: express.Response) {
             res.end(JSON.stringify(response));
         }
     } catch (exc) {
-        res.end({ state: "OTHER_ERROR" });
+        res.end({state: "OTHER_ERROR"});
     }
 }

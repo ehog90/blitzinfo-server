@@ -1,24 +1,22 @@
 ﻿import * as mongoose from "mongoose";
-import {MongoDbPrimitives} from "./mongoDbPrimitives"
-import {Entities} from "../interfaces/entities";
-import ISettlementDocument = Entities.ISettlementDocument;
-import IUserDocument = Entities.IUserDocument;
-import IStrokeDocument = Entities.IStrokeDocument;
-import IMinutelyStatDocument = Entities.IMinutelyStatDocument;
-import IAllStatDocument = Entities.IAllStatDocument;
-import IDeviceLocationLogDocument = Entities.IDeviceLocationLogDocument;
-import IDeviceLocationRecentDocument = Entities.IDeviceLocationRecentDocument;
-import ISavedLocation = Entities.ISavedLocation;
-import IMetHuAlertDocument = Entities.IMetHuAlertDocument;
-import ILogDocument = Entities.ILogDocument;
-import IStationDocument = Entities.IStationDocument;
-import ICountryOutlineDocument = Entities.ICountryOutlineDocument;
+import {MongooseAutoIncrementID} from 'mongoose-auto-increment-reworked';
 
-const autoIncrement = require("../../changed-modules/mongodb-autoincrement");
 
-/*
- MongoDB sémaleírások.
- */
+import {
+    IAllStatDocument,
+    ICountryOutlineDocument,
+    IDeviceLocationLogDocument,
+    IDeviceLocationRecentDocument,
+    ILogDocument,
+    IMetHuAlertDocument,
+    IMinutelyStatDocument,
+    ISavedLocation,
+    ISettlementDocument, IStationDocument,
+    IStrokeDocument,
+    IUserDocument
+} from "../interfaces/entities";
+import {MongoDbPrimitives} from "./mongoDbPrimitives";
+
 const strokeSchema = {
     latLon: [Number],
     locationData: MongoDbPrimitives.GeoAddress,
@@ -26,8 +24,7 @@ const strokeSchema = {
     sunData: MongoDbPrimitives.SunData,
     blitzortungId: Number
 };
-const locationSchema =
-{
+const locationSchema = {
     num: Number,
     updater: String,
     timeFirst: Date,
@@ -41,8 +38,7 @@ const locationSchema =
     alerts: [strokeSchema]
 };
 
-const locationSchemaRecent =
-{
+const locationSchemaRecent = {
     num: Number,
     updater: String,
     timeFirst: Date,
@@ -124,8 +120,10 @@ const mongoStrokeSchemaTtlTenMin = new mongoose.Schema({
     blitzortungId: { type: Number, index: true }
 });
 mongoStrokeSchemaTtlTenMin.index({ time: 1 }, { expireAfterSeconds: 600 });
+mongoStrokeSchemaTtlTenMin.plugin(MongooseAutoIncrementID.plugin, {modelName: 'ttlTenMinStrokes'});
 
-mongoStrokeSchemaTtlTenMin.plugin(autoIncrement.mongoosePlugin);
+
+
 const mongoStrokeSchemaTtlOneHour = new mongoose.Schema({
     latLon: { type: [Number], index: '2dsphere' },
     locationData: MongoDbPrimitives.GeoAddress,
@@ -133,11 +131,11 @@ const mongoStrokeSchemaTtlOneHour = new mongoose.Schema({
     sunData: MongoDbPrimitives.SunData,
     blitzortungId: Number
 });
-mongoStrokeSchemaTtlOneHour.plugin(autoIncrement.mongoosePlugin);
+mongoStrokeSchemaTtlOneHour.plugin(MongooseAutoIncrementID.plugin, {modelName: 'ttlOneHourStrokes'});
 mongoStrokeSchemaTtlOneHour.index({ time: 1 }, { expireAfterSeconds: 3600 });
 
 const mongoStrokeSchema = new mongoose.Schema(strokeSchema);
-mongoStrokeSchema.plugin(autoIncrement.mongoosePlugin);
+mongoStrokeSchema.plugin(MongooseAutoIncrementID.plugin, {modelName: 'allStrokes'});
 
 const mongoAlertsSchemaTtl = new mongoose.Schema(alertsSchema);
 mongoAlertsSchemaTtl.index({ timeLast: 1 }, { expireAfterSeconds: 1209600 });

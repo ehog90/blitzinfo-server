@@ -3,16 +3,16 @@
  */
 import * as express from "express";
 import {authTest} from "./authentication-middleware";
-import {getStationsAsync, stationCount, stationsByCountry} from "./stations";
-import {welcome} from "./welcome";
-import {currentUTCYearStats, lastMinutesStatistics, overallStats, tenminStats} from "./stats";
 import {flagImage} from "./flags";
-import {login, register} from "./userHandling";
-import {errors} from "./logs";
 import {locationLogsForUser} from "./locationLogs";
+import {errors} from "./logs";
+import {nearbyStrokes} from "./nearbyStrokes";
 import {periodicUpdate} from "./perupdate";
 import {getLocationsForUser, newLocationInstance, removeLocationInstance} from "./savedLocations";
-import {nearbyStrokes} from "./nearbyStrokes";
+import {getStationsAsync, stationsByCountry, stationCount} from "./stations";
+import {currentUTCYearStats, lastMinutesStatistics, overallStats, tenminStats} from "./stats";
+import {login, register} from "./userHandling";
+import {welcome} from "./welcome";
 
 export const defaultRouter =  express.Router();
 

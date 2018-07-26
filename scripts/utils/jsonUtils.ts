@@ -1,7 +1,6 @@
-﻿import {Entities} from "../interfaces/entities";
-export module JsonUtils {
+﻿import {IDeviceLocationLog, IStroke} from "../interfaces/entities";
 
-    import IStroke = Entities.IStroke;
+export module JsonUtils {
     function roundTime(time: Date) {
         return time.getTime() - time.getTime() % (10 * 60 * 1000);
     }
@@ -26,11 +25,11 @@ export module JsonUtils {
         ]);
     }
 
-    export function flattenStrokeArray(strokes: Entities.IStroke[]): any[][] {
+    export function flattenStrokeArray(strokes: IStroke[]): any[][] {
         return strokes.map(x => flattenStroke(x));
     }
 
-    export function toLogsJson(deviceLocation: Entities.IDeviceLocationLog): any {
+    export function toLogsJson(deviceLocation: IDeviceLocationLog): any {
         return ([
             deviceLocation._id,
             deviceLocation.timeFirst.getTime(),

@@ -1,31 +1,27 @@
-﻿import * as geo from "../utils/geo";
-import {Modules} from "../interfaces/modules";
-import IReverseGeocoderService = Modules.IReverseGeoCoderService;
-import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
-import {Entities} from "../interfaces/entities";
-import IStroke = Entities.IStroke;
-import IReverseGeocoderAsync = Modules.IReverseGeoCoderAsync;
-import ILightningMapsStroke = Entities.ILightningMapsStroke;
-import {lightningMapsWebSocket} from "../lightningMaps/lightningMaps";
-import {Subject} from "rxjs/Subject";
+﻿import {loggerInstance} from "../logger/loggerInstance";
+
+import {Subject} from "rxjs";
+import {ILightningMapsStroke, IStroke} from "../interfaces/entities";
+import {ILightningMapsWebSocket, IReverseGeoCoderAsync, IReverseGeoCoderService} from "../interfaces/modules";
+import {lightningMapsWebSocketInstance} from "../lightningMaps/lightningMaps";
+import * as geo from "../utils/geo";
 import {remoteMongoReverseGeocoderAsync} from "./remote-mongo-reverse-geocoder";
-import {logger} from "../logger/logger";
 
 const sunCalc: any = require("../../changed-modules/suncalc");
 
-class ReverseGeocoderService implements IReverseGeocoderService {
+class ReverseGeocoderService implements IReverseGeoCoderService {
     private lightningMapsWebSocket: ILightningMapsWebSocket;
     public lastGeocodedStroke: Subject<IStroke>;
     public serverEventChannel: Subject<any>;
 
-    constructor(private reverseGeocoder: IReverseGeocoderAsync) {
+    constructor(private reverseGeocoder: IReverseGeoCoderAsync) {
     }
 
     public async geoCode(stroke: ILightningMapsStroke) {
-        let sunData = sunCalc.getPosition(new Date(stroke.time), stroke.lat, stroke.lon);
-        let sunElevation: number = (sunData.altitude * 180 / Math.PI);
+        const sunData = sunCalc.getPosition(new Date(stroke.time), stroke.lat, stroke.lon);
+        const sunElevation: number = (sunData.altitude * 180 / Math.PI);
         const azimuth: number = ((sunData.azimuth * 180 / Math.PI));
-        const geoCodedStroke: Entities.IStroke = {
+        const geoCodedStroke: IStroke = {
             latLon: [stroke.lon, stroke.lat],
             locationData: {
                 cc: 'xx',
@@ -43,13 +39,12 @@ class ReverseGeocoderService implements IReverseGeocoderService {
             },
             blitzortungId: stroke.id,
             _id: null
-        };
+        } as IStroke;
         try {
             geoCodedStroke.locationData = await this.reverseGeocoder.getGeoInformation([stroke.lon, stroke.lat]);
             this.lastGeocodedStroke.next(geoCodedStroke);
-        }
-        catch (error) {
-            logger.sendErrorMessage(0, 0, "Geocoder", "Geocoder error", false)
+        } catch (error) {
+            loggerInstance.sendErrorMessage(0, 0, "Geocoder", "Geocoder error", false);
         }
     }
 
@@ -61,6 +56,6 @@ class ReverseGeocoderService implements IReverseGeocoderService {
     }
 }
 
-export const reverseGeocoderService: IReverseGeocoderService = new
+export const reverseGeocoderService: IReverseGeoCoderService = new
 ReverseGeocoderService(remoteMongoReverseGeocoderAsync);
-reverseGeocoderService.assignWebSocket(lightningMapsWebSocket);
+reverseGeocoderService.assignWebSocket(lightningMapsWebSocketInstance);

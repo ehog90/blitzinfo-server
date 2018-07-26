@@ -1,21 +1,17 @@
-﻿import * as websocket from "websocket";
-import {logger} from "../logger/logger";
+﻿import {loggerInstance} from "../logger/loggerInstance";
+
+import {uniqWith} from "lodash";
+import {interval, timer, Observable, Subject, Subscription, TimeInterval} from "rxjs";
+import {buffer, timeInterval} from "rxjs/operators";
+import * as websocket from "websocket";
 import {config, initObject} from "../config";
-import {uniqBy, uniqWith, chain}  from "lodash";
-import {Modules} from "../interfaces/modules";
-import {Entities} from "../interfaces/entities";
-import ILightningMapsWebSocket = Modules.ILightningMapsWebSocket;
-import ILightningMapsStroke = Entities.ILightningMapsStroke;
-import IIdAndDate = Entities.IIdAndDate;
-import ILogger = Modules.ILogger;
-import ILightningMapsStrokeBulk = Entities.ILightningMapsStrokeBulk;
-import ISocketInitialization = Entities.ISocketInitialization;
-import {Subject} from "rxjs/Subject";
-import {Observable,TimeInterval} from "rxjs/Rx";
-import {Subscription} from "rxjs/Subscription";
-/*
- A LightningMaps-kapcsolatért felelős osztály. a villámok aszinkron módon érkeznek a távoli szerverről, és továbbítja azt az adatbázisba mentésért felelős osztálynak.
- */
+import {
+    IIdAndDate,
+    ILightningMapsStroke,
+    ILightningMapsStrokeBulk,
+    ISocketInitialization
+} from "../interfaces/entities";
+import {ILightningMapsWebSocket, ILogger} from "../interfaces/modules";
 
 class LightningMapsWebSocket implements ILightningMapsWebSocket {
     public initializationObject: ISocketInitialization;
@@ -44,15 +40,17 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
         this.lastReceived = new Subject<ILightningMapsStroke>();
         this.duplicatedData = new Subject<ILightningMapsStroke>();
 
-        this.timeoutCheckerTimer = Observable.timer(this.timeoutInSec * 1000, this.timeoutInSec * 1000)
-            .timeInterval();
-        this.reconnectTimer = Observable.timer(46800000, 46800000)
-            .timeInterval();
+        this.timeoutCheckerTimer = timer(this.timeoutInSec * 1000, this.timeoutInSec * 1000).pipe(
+            timeInterval());
+        this.reconnectTimer = timer(46800000, 46800000)
+            .pipe(
+                timeInterval());
         this.timerSubscription = this.timeoutCheckerTimer.subscribe(x => this.timeoutTimerSubscription());
         this.reconnectSubscription = this.reconnectTimer.subscribe(x => this.reconnectTimerSubscription());
         this.duplicatedData
-            .buffer(Observable.interval(10000))
-            .subscribe(strokes => {
+            .pipe(
+                buffer(interval(1000))
+            ).subscribe(strokes => {
                 if (strokes.length > 0) {
                     this.logger.sendErrorMessage(197,
                         0,
@@ -103,9 +101,9 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
     }
 
     public isStrokeCorrect(stroke: ILightningMapsStroke): boolean {
-        return stroke.lat != undefined &&
-            stroke.lon != undefined &&
-            stroke.id != undefined && !isNaN(stroke.lat) && !isNaN(stroke.lon) && !isNaN(stroke.id) &&
+        return stroke.lat !== undefined &&
+            stroke.lon !== undefined &&
+            stroke.id !== undefined && !isNaN(stroke.lat) && !isNaN(stroke.lon) && !isNaN(stroke.id) &&
             stroke.lat <= 90 &&
             stroke.lat >= -90 &&
             stroke.lon <= 180 &&
@@ -114,8 +112,8 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
     }
 
     private isStrokeAlreadyProcessed(stroke: ILightningMapsStroke): boolean {
-        for (let x of this.processedStrokes) {
-            if (stroke.id == x.id) {
+        for (const x of this.processedStrokes) {
+            if (stroke.id === x.id) {
                 return true;
             }
         }
@@ -156,7 +154,8 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
                             if (messageParsed.strokes != null) {
                                 const messageBulk = <ILightningMapsStrokeBulk>messageParsed;
                                 const originalStrokes = messageBulk.strokes;
-                                messageBulk.strokes = uniqWith(messageBulk.strokes, (a, b) => (a.lat == b.lat && a.lon == b.lon) || a.id == b.id);
+                                messageBulk.strokes = uniqWith(messageBulk.strokes,
+                                    (a, b) => (a.lat === b.lat && a.lon === b.lon) || a.id === b.id);
                                 if (originalStrokes.length !== messageBulk.strokes.length) {
                                     this.logger
                                         .sendWarningMessage(0,
@@ -208,5 +207,6 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
             });
     }
 }
-export const lightningMapsWebSocket: ILightningMapsWebSocket = new
-LightningMapsWebSocket(logger, 60, config.lightningMapsUrl);
+
+export const lightningMapsWebSocketInstance: ILightningMapsWebSocket = new
+LightningMapsWebSocket(loggerInstance, 60, config.lightningMapsUrl);

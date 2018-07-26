@@ -1,7 +1,6 @@
 ﻿import * as express from 'express';
+import {IErrorRequest} from "../interfaces/entities";
 import * as mongo from "../mongo/mongoDbSchemas";
-import {Entities} from "../interfaces/entities";
-import IErrorRequest = Entities.IErrorRequest;
 
 /*
 REST: A rendszernapló egy bizonyos részét adja vissza, több szűrési feltétellel.

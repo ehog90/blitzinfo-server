@@ -1,7 +1,8 @@
 ﻿import * as https from "https";
 import {RequestOptions} from "https";
+import {Observable} from "rxjs";
+
 const request = require("request");
-import {Observable} from "rxjs/Observable";
 
 export function getHttpRequestAsync<T>(url: string, timeout: number): Observable<T> {
     return Observable.create(observer => {
@@ -22,7 +23,7 @@ export function getHttpRequestAsync<T>(url: string, timeout: number): Observable
 
 export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): Observable<T> {
     return Observable.create(observer => {
-        const request: any = https.request(opts,
+        const req: any = https.request(opts,
             res => {
                 let d;
                 res.on('data',
@@ -40,6 +41,6 @@ export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): O
                     observer.error(e);
                     observer.complete();
                 });
-        request.end(JSON.stringify(message));
+        req.end(JSON.stringify(message));
     });
 }

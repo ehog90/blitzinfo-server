@@ -2,25 +2,31 @@
  * Created by ehog on 2017. 06. 25..
  */
 
-import {Observable} from "rxjs/Observable";
-export {}
-import {DocumentQuery, mquery} from 'mongoose'
+import {Observable} from "rxjs";
+export {};
+import {mquery, DocumentQuery} from 'mongoose';
+import {fromPromise} from "rxjs/internal-compatibility";
+
 declare module 'mongoose' {
-    interface mquery{
-        toObservable() : Observable<any>
-        toPromise() : Promise<any>
+    // noinspection TsLint
+    interface mquery {
+        toObservable(): Observable<any>;
+
+        toPromise(): Promise<any>;
     }
+
     interface DocumentQuery<T, DocType extends Document> {
-        toObservable() : Observable<T>
-        toPromise() : Promise<T>
+        toObservable(): Observable<T>;
+
+        toPromise(): Promise<T>;
     }
 }
-mquery.prototype.toObservable = function() {
+mquery.prototype.toObservable = function () {
     const query = this;
-    return Observable.fromPromise(query.exec())
+    return fromPromise(query.exec());
 };
 
-mquery.prototype.toPromise = function() {
+mquery.prototype.toPromise = function () {
     const query = this;
     return query.exec();
 };

@@ -1,14 +1,9 @@
 ﻿import * as fs from "fs";
-import {Modules} from "../interfaces/modules";
-import {Entities} from "../interfaces/entities";
-import ICountryReverseGeoCodeResult = Entities.ICountryReverseGeoCodeResult;
-import Observable = Rx.Observable;
-import ICountryReverseGeoCoderAsync = Modules.ICountryReverseGeoCoderAsync;
+import {ICountryReverseGeoCodeResult} from "../interfaces/entities";
+import {ICountryReverseGeoCoderAsync} from "../interfaces/modules";
+
 const wherewolf = require("wherewolf");
 
-/*
- Országszintű reverse geocoding osztály. Egy latlon értékhez határozza meg a területkódot.
- */
 class CountryReverseGeocoderAsync implements ICountryReverseGeoCoderAsync {
     private whereWolfInstance: any;
 
@@ -20,16 +15,15 @@ class CountryReverseGeocoderAsync implements ICountryReverseGeoCoderAsync {
         this.whereWolfInstance.add('sea', seaDataGeoJson);
     }
 
-    getCountryData(latLonPair: number[]): Promise<ICountryReverseGeoCodeResult> {
+    public getCountryData(latLonPair: number[]): Promise<ICountryReverseGeoCodeResult> {
         const result = {cc: "xx", seaData: null};
         const geoResult = this.whereWolfInstance.find({lat: latLonPair[1], lng: latLonPair[0]}, {wholeFeature: true});
         if (geoResult.cc) {
             result.cc = geoResult.cc.properties.tags['ISO3166-1'].toLowerCase();
-        }
-        else if (!geoResult.cc && geoResult.sea != null) {
+        } else if (!geoResult.cc && geoResult.sea != null) {
             result.seaData = geoResult.sea.properties.name;
         }
-        return Promise.resolve(result)
+        return Promise.resolve(result);
     }
 }
 

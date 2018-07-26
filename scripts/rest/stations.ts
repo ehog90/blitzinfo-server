@@ -17,16 +17,17 @@ export function stationCount(req: any, res: express.Response) {
 
     StationsMongoModel.find(filter, { _id: 0, __v: 0 }).sort({ detCnt: -1 }).limit(limit).exec((err, result: any[]) => {
         result.forEach(elem => {
-            if (elem.lastSeen)
+            if (elem.lastSeen) {
                 elem.lastSeen = elem.lastSeen.getTime();
+            }
         });
         res.json(result);
-    })
+    });
 }
 
 export async function getStationsAsync(req: express.Request, res: express.Response) {
-    let lat = req.query['lat'] || 0;
-    let lon = req.query['lon'] || 0;
+    const lat = req.query['lat'] || 0;
+    const lon = req.query['lon'] || 0;
     if (!isNaN(lat) && !isNaN(lon)) {
         const count: number = await StationsMongoModel.count({});
         const results = await StationsMongoModel.aggregate([
@@ -48,8 +49,7 @@ export async function getStationsAsync(req: express.Request, res: express.Respon
             }
         ]);
         res.json(results);
-    }
-    else {
+    } else {
         res.json({error: "NO_COORDS"});
     }
 }

@@ -1,14 +1,9 @@
 ﻿import * as express from 'express';
-import {Modules} from "../interfaces/modules";
-import ILocationUpdater = Modules.ILocationUpdater;
-import {Entities} from "../interfaces/entities";
-import IUser = Entities.IUser;
-import IDeviceUpdateRequest = Entities.IDeviceUpdateRequest;
-import LocationUpdateSource = Entities.LocationUpdateSource;
-import {locationUpdater} from "../databaseSaver/locationUpdater";
+import {locationUpdaterInstance} from "../databaseSaver/locationUpdaterInstance";
+import {IDeviceUpdateRequest, LocationUpdateSource} from "../interfaces/entities";
 
 
 export function periodicUpdate(req: IDeviceUpdateRequest, res: express.Response) {
-    locationUpdater.insertLastLocationSubject.next({ updater: LocationUpdateSource.PeriodicQuery, deviceData: req.body });
-    res.json({ state: 'PERIODIC_UPDATE_TRIGGERED: '+JSON.stringify(req.body) });
+    locationUpdaterInstance.insertLastLocationSubject.next({ updater: LocationUpdateSource.PeriodicQuery, deviceData: req.body });
+    res.json({ state: 'PERIODIC_UPDATE_TRIGGERED: ' + JSON.stringify(req.body) });
 }

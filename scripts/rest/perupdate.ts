@@ -1,5 +1,5 @@
 ﻿import * as express from 'express';
-import {locationUpdaterInstance} from "../databaseSaver/locationUpdaterInstance";
+import {locationUpdaterInstance} from "../databaseSaver/locationUpdater";
 import {IDeviceUpdateRequest, LocationUpdateSource} from "../interfaces/entities";
 
 

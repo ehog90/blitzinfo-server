@@ -11,7 +11,7 @@ import {config, corsSettings} from "./scripts/config";
 import {firebaseService} from "./scripts/firebase/firebaseService";
 import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
 
-import {loggerInstance} from "./scripts/logger/loggerInstance";
+import {loggerInstance} from "./scripts/logger/logger";
 
 import {IServerError} from "./scripts/interfaces/entities";
 import {lightningMapsWebSocketInstance} from "./scripts/lightningMaps/lightningMaps";

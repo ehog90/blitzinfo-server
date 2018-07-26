@@ -1,5 +1,5 @@
 ﻿import * as express from 'express';
-import {locationUpdaterInstance} from "../databaseSaver/locationUpdaterInstance";
+import {locationUpdaterInstance} from "../databaseSaver/locationUpdater";
 import {INewSavedLocationInstance, IRemoveSavedLocationInstance, IUserDataRequest} from "../interfaces/entities";
 import * as mongo from "../mongo/mongoDbSchemas";
 

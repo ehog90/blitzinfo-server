@@ -1,4 +1,4 @@
-﻿import {loggerInstance} from "../logger/loggerInstance";
+﻿import {loggerInstance} from "../logger/logger";
 
 import {uniqWith} from "lodash";
 import {interval, timer, Observable, Subject, Subscription, TimeInterval} from "rxjs";

@@ -1,4 +1,4 @@
-﻿import {loggerInstance} from "../logger/loggerInstance";
+﻿import {loggerInstance} from "../logger/logger";
 
 import {Subject} from "rxjs";
 import {ILightningMapsStroke, IStroke} from "../interfaces/entities";

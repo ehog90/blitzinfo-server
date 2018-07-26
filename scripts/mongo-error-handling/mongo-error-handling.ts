@@ -2,7 +2,7 @@
  * Created by ehog on 2016. 11. 06..
  */
 
-import {loggerInstance} from "../logger/loggerInstance";
+import {loggerInstance} from "../logger/logger";
 
 export function logMongoErrors(error: any): void {
     if (!error) {

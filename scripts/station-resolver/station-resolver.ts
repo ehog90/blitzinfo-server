@@ -1,4 +1,4 @@
-import {loggerInstance} from "../logger/loggerInstance";
+import {loggerInstance} from "../logger/logger";
 
 import {toPairs} from 'lodash';
 import {from, of as observableOf, timer, Observable, TimeInterval} from "rxjs";

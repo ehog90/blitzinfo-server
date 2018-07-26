@@ -1,7 +1,7 @@
-﻿import {loggerInstance} from "../logger/loggerInstance";
+﻿import {loggerInstance} from "../logger/logger";
 
 import {Subject} from "rxjs";
-import {databaseSaverInstance} from "../databaseSaver/databaseSaverInstance";
+import {databaseSaverInstance} from "../databaseSaver/databaseSaver";
 import {
     IDeviceLocationRecent,
     IFcmStrokeLastLocation, IFcmStrokeSavedLocation,

@@ -1,4 +1,4 @@
-﻿import {loggerInstance as loggerInstance} from "../logger/loggerInstance";
+﻿import {loggerInstance as loggerInstance} from "../logger/logger";
 
 import * as fs from "fs";
 import {from, of as observableOf, timer, Observable, TimeInterval} from "rxjs";

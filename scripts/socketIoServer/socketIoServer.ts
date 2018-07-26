@@ -1,12 +1,12 @@
-﻿import {loggerInstance} from "../logger/loggerInstance";
+﻿import {loggerInstance} from "../logger/logger";
 
 import * as http from "http";
 import {forkJoin, timer, Observable, Subject, TimeInterval} from "rxjs";
 import {map, timeInterval} from "rxjs/operators";
 import * as socketIo from 'socket.io';
 import {config} from "../config";
-import {databaseSaverInstance} from "../databaseSaver/databaseSaverInstance";
-import {locationUpdaterInstance} from "../databaseSaver/locationUpdaterInstance";
+import {databaseSaverInstance} from "../databaseSaver/databaseSaver";
+import {locationUpdaterInstance} from "../databaseSaver/locationUpdater";
 import {
     HungarianAlertTypes,
     IAlertArea, IAllStatDocument, IDeviceUpdateRequestBody, IGeoInformation,

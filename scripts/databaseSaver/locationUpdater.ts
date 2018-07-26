@@ -1,4 +1,4 @@
-﻿import {loggerInstance} from "../logger/loggerInstance";
+﻿import {loggerInstance} from "../logger/logger";
 
 import * as _ from "lodash";
 import {interval, Subject} from "rxjs";

@@ -3,7 +3,7 @@ import {filter, take, timeInterval} from "rxjs/operators";
 import {config} from "../config";
 import {IStroke} from "../interfaces/entities";
 import {IDatabaseSaver, ILogger, IReverseGeoCoderService} from "../interfaces/modules";
-import {loggerInstance} from "../logger/loggerInstance";
+import {loggerInstance} from "../logger/logger";
 import {logMongoErrors} from "../mongo-error-handling/mongo-error-handling";
 import * as mongo from "../mongo/mongoDbSchemas";
 import {reverseGeocoderService} from "../reverseGeocoderAndSun/reverseGeocoderService";

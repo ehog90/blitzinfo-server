@@ -1,5 +1,5 @@
 import * as express from 'express';
-import {loggerInstance} from "../logger/loggerInstance";
+import {loggerInstance} from "../logger/logger";
 
 export function customMorganLogger(req: express.Request, res: express.Response, arg?: string | number | boolean): string {
     if (res.statusCode === 500) {

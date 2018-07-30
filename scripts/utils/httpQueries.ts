@@ -9,11 +9,9 @@ export function getHttpRequestAsync<T>(url: string, timeout: number): Observable
         request({url: url, json: true, timeout: timeout}, (error, response, body) => {
             if (error) {
                 observer.error({error: error, errorCode: -1});
-            }
-            else if (response.statusCode !== 200) {
+            } else if (response.statusCode !== 200) {
                 observer.error({error: "Other", errorCode: response.statusCode});
-            }
-            else {
+            } else {
                 observer.next(body);
             }
             observer.complete();

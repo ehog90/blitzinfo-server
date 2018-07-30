@@ -2,9 +2,9 @@
 import * as fs from 'fs';
 import * as moment from 'moment';
 import {Subject} from "rxjs";
+import {ILog, LogType} from "../interfaces/entities";
 import {ILogger} from "../interfaces/modules";
 import * as mongo from "../mongo/mongoDbSchemas";
-import {ILog, LogType} from "../interfaces/entities";
 
 class Logger implements ILogger {
     private xtermData: any;

@@ -11,8 +11,7 @@ export module MongoDbPrimitives {
         suburbDef: String,
         sm_hun: String
     };
-    export const AlertRegions =
-        {
+    export const AlertRegions = {
             countyName: String,
             regionalUnitName: String
         };
@@ -30,6 +29,6 @@ export module MongoDbPrimitives {
         sunElev: Number,
         azimuth: Number,
         sunState: String
-    }
+    };
 
 }

@@ -3,10 +3,6 @@
 import * as fs from "fs";
 import {from, of as observableOf, timer, Observable, TimeInterval} from "rxjs";
 import {catchError, flatMap, map, merge, reduce, timeInterval} from "rxjs/operators";
-import {ILogger, IMetHuParser} from "../interfaces/modules";
-import * as mongo from "../mongo/mongoDbSchemas";
-import * as fcmUtils from "../utils/firebase";
-import {customHttpRequestAsync, getHttpRequestAsync} from "../utils/httpQueries";
 import {
     HungarianAlertTypes,
     IAlertArea,
@@ -15,6 +11,10 @@ import {
     IMetHuData,
     IMetHuEntityWithData, MeteoEvents
 } from "../interfaces/entities";
+import {ILogger, IMetHuParser} from "../interfaces/modules";
+import * as mongo from "../mongo/mongoDbSchemas";
+import * as fcmUtils from "../utils/firebase";
+import {customHttpRequestAsync, getHttpRequestAsync} from "../utils/httpQueries";
 
 const htmlparser2 = require("htmlparser2");
 

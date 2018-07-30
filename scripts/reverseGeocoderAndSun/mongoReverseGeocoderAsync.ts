@@ -3,10 +3,10 @@
  */
 
 import {config} from "../config";
+import {IGeoAddress, ISettlementDocument} from "../interfaces/entities";
 import {IReverseGeoCoderAsync} from "../interfaces/modules";
 import * as mongo from "../mongo/mongoDbSchemas";
 import * as crg from "../reverseGeocoderAndSun/countryReverseGeocoderAsync";
-import {IGeoAddress, ISettlementDocument} from "../interfaces/entities";
 
 class MongoReverseGeocoderAsync implements IReverseGeoCoderAsync {
 

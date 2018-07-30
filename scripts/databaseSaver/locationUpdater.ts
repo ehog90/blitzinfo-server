@@ -180,7 +180,8 @@ export class LocationUpdater implements ILocationUpdater {
 
     }
 
-    private async insertLastLocationToDatabase(updater: LocationUpdateSource, deviceData: IDeviceUpdateRequestBody): Promise<ILocationLogResult> {
+    private async insertLastLocationToDatabase(updater: LocationUpdateSource,
+                                               deviceData: IDeviceUpdateRequestBody): Promise<ILocationLogResult> {
         const existingData = await mongo.LocationLogMongoModel.findOne({'did': {'$eq': deviceData.se.did}}).sort({'timeLast': -1});
         if (!existingData) {
             const locationData = await this.reverseGeocodeWithCountryAsync(deviceData.latLon);

@@ -5,6 +5,7 @@
 /.vs/
 /flagsOriginal/
 /flagsConverted/
-/scripts/restricted/restricted.ts
 /node_modules/
 /public/images/flagsConverted/
+**/*.sensitive.ts
+**/*.sensitive.json

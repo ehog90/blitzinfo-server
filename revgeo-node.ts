@@ -2,8 +2,8 @@ import * as bodyParser from "body-parser";
 import * as express from "express";
 import * as http from "http";
 import * as mongoose from 'mongoose';
-import {config} from "./scripts/config";
-import {mongoReverseGeocoderAsync} from "./scripts/reverseGeocoderAndSun/mongoReverseGeocoderAsync";
+import {config} from "./app/config";
+import {mongoReverseGeocoderAsync} from "./app/reverse-geocoding/mongo-based-reverse-geocoder.";
 
 mongoose.connect(config.mongoLink, (error) => {
     if (error) {

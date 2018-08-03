@@ -4,9 +4,11 @@
   "scripts": {
     "lint": "tslint -p tslint.json",
     "rimraf": "rimraf dist",
-    "copy-assets": "copyfiles \"static-json-data/*.json\" init.json \"init-on*\" dist",
+    "copy-assets": "copyfiles \"static-json-data/*.json\" package*.json \"init-on*\" init.json dist",
     "build-webpack": "webpack --config webpack.main.app.config.js && webpack --config webpack.revgeo.app.config.js && webpack --config webpack.test-output.config.js",
-    "build": "npm run rimraf && npm run build-webpack && npm run copy-assets"
+    "build": "npm run rimraf && npm run build-webpack && npm run copy-assets",
+    "deploy": "npm run build && node ssh-deployment",
+    "generate-barrels": "barrelsby -D -e spec.ts$ -d ./app/database && barrelsby -D -e spec.ts$ -d ./app/helpers && barrelsby -D -e spec.ts$ -d ./app/rest && barrelsby -D -e spec.ts$ -d ./app/reverse-geocoding && barrelsby -D -e spec.ts$ -d ./app/services"
   },
   "dependencies": {
     "body-parser": "^1.18.3",
@@ -56,13 +58,15 @@
     "@types/socket.io": "^1.4.36",
     "@types/socket.io-client": "^1.4.32",
     "@types/websocket": "0.0.39",
+    "barrelsby": "^1.0.2",
     "copyfiles": "^2.0.0",
     "grunt-ts": "^6.0.0-beta.21",
+    "node-ssh": "^5.1.2",
     "rimraf": "^2.6.2",
     "rxjs-tslint": "^0.1.5",
     "ts-loader": "^4.4.2",
     "tslint": "^5.11.0",
-    "typescript": "^2.9.2",
+    "typescript": "^3.0.1",
     "webpack": "^4.16.3",
     "webpack-cli": "^3.1.0",
     "webpack-node-externals": "^1.7.2"

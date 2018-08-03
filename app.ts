@@ -7,21 +7,21 @@ import * as express from "express";
 import * as http from "http";
 import * as method_override from "method-override";
 import * as path from "path";
-import {config, corsSettings} from "./scripts/config";
-import {firebaseService} from "./scripts/firebase/firebaseService";
-import {metHuParser} from "./scripts/hungarian-meteo-alerts/hungarian-meteo-alerts-parser";
+import {config, corsSettings} from "./app/config";
+import {firebaseMessagingService} from "./app/services/firebase-messaging-service";
+import {metHuParser} from "./app/services/hungarian-omsz-alerts-parser-service";
 
-import {loggerInstance} from "./scripts/logger/logger";
+import {loggerInstance} from "./app/services/logger-service";
 
-import {IServerError} from "./scripts/interfaces/entities";
-import {lightningMapsWebSocketInstance} from "./scripts/lightningMaps/lightningMaps";
-import {authenticationMiddleware} from "./scripts/rest/authentication-middleware";
-import {customMorganLogger} from "./scripts/rest/morgan-logger";
-import {defaultRouter} from "./scripts/rest/router";
-import {socketIoServer} from "./scripts/socketIoServer/socketIoServer";
-import {stationResolver} from "./scripts/station-resolver/station-resolver";
+import {IServerError} from "./app/contracts/entities";
+import {authenticationMiddleware} from "./app/rest/authentication-middleware";
+import {customMorganLogger} from "./app/rest/morgan-logger";
+import {defaultRouter} from "./app/rest/router";
+import {lightningMapsWebSocketInstance} from "./app/services/lightning-maps-data-service";
+import {socketIoService} from "./app/services/socket-io-service";
+import {stationResolverService} from "./app/services/station-resolver-service";
 
-require('./scripts/mongo/mongoose-extensions');
+require('./app/database/mongoose-extensions');
 // Set up mongoose
 mongoose.promise = global.Promise;
 mongoose.connect(config.mongoLink, {poolSize: 3}, (error) => {
@@ -54,6 +54,6 @@ server.on("error", (error: IServerError) => {
 loggerInstance.sendNormalMessage(40, 16, "Configuration", JSON.stringify(config), false);
 lightningMapsWebSocketInstance.start();
 metHuParser.invoke();
-socketIoServer.invoke();
-stationResolver.start();
-firebaseService.invoke();
+socketIoService.invoke();
+stationResolverService.start();
+firebaseMessagingService.invoke();

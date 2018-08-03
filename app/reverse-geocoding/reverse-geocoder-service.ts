@@ -2,7 +2,8 @@
 import {ILightningMapsStroke, IStroke} from "../contracts/entities";
 import {ILightningMapsWebSocket, IReverseGeoCoderAsync, IReverseGeoCoderService} from "../contracts/service-interfaces";
 import * as geo from "../helpers/geospatial-helper";
-import {lightningMapsWebSocketInstance, loggerInstance} from "../services";
+import {loggerInstance} from "../services";
+import {lightningMapsDataService} from "../services/lightning-maps-data-service"; // DO NOT CHANGE THIS.
 import {remoteMongoReverseGeocoderAsync} from "./remote-mongo-reverse-geocoder";
 
 const sunCalc: any = require("../js-modules/suncalc");
@@ -54,6 +55,7 @@ class ReverseGeocoderService implements IReverseGeoCoderService {
     }
 }
 
-export const reverseGeocoderService: IReverseGeoCoderService = new
-ReverseGeocoderService(remoteMongoReverseGeocoderAsync);
-reverseGeocoderService.assignWebSocket(lightningMapsWebSocketInstance);
+export const reverseGeocoderService: IReverseGeoCoderService = new ReverseGeocoderService(remoteMongoReverseGeocoderAsync);
+console.log(lightningMapsDataService);
+
+reverseGeocoderService.assignWebSocket(lightningMapsDataService);

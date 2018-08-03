@@ -13,7 +13,7 @@ import {
 } from "../contracts/entities";
 import {ILightningMapsWebSocket, ILogger} from "../contracts/service-interfaces";
 
-class LightningMapsWebSocket implements ILightningMapsWebSocket {
+class LightningMapsDataService implements ILightningMapsWebSocket {
     public initializationObject: ISocketInitialization;
     private blitzortungWebSocket: websocket.client;
     private blitzortungConnection: websocket.connection;
@@ -208,5 +208,5 @@ class LightningMapsWebSocket implements ILightningMapsWebSocket {
     }
 }
 
-export const lightningMapsWebSocketInstance: ILightningMapsWebSocket = new
-LightningMapsWebSocket(loggerInstance, 60, config.lightningMapsUrl);
+export const lightningMapsDataService: ILightningMapsWebSocket = new
+LightningMapsDataService(loggerInstance, 60, config.lightningMapsUrl);

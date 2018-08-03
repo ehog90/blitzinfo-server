@@ -8,7 +8,7 @@ import {IStationResolver} from "../contracts/service-interfaces";
 import {StationsMongoModel} from "../database";
 import * as json from "../helpers/http-queries";
 import {remoteMongoReverseGeocoderAsync} from "../reverse-geocoding";
-import {lightningMapsWebSocketInstance} from "./lightning-maps-data-service";
+import {lightningMapsDataService} from "./lightning-maps-data-service";
 
 class StationResolver implements IStationResolver {
     private static tick = 1000 * 60 * 60 * 2;
@@ -23,7 +23,7 @@ class StationResolver implements IStationResolver {
         this.timer = timer(5000, StationResolver.tick)
             .pipe(timeInterval());
         this.timer.subscribe(() => this.stationUpdateRequested());
-        lightningMapsWebSocketInstance.lastReceived.pipe(filter(stroke => !!stroke.sta)).subscribe(stroke => {
+        lightningMapsDataService.lastReceived.pipe(filter(stroke => !!stroke.sta)).subscribe(stroke => {
             const stations: number[] =
                 toPairs(stroke.sta).map(x => Number(x[0]));
 

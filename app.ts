@@ -1,6 +1,7 @@
 ﻿// Imports.
 import * as bodyParser from "body-parser";
 import * as morgan from "morgan";
+
 const mongoose = require('mongoose');
 import * as cors from 'cors';
 import * as express from "express";
@@ -8,18 +9,16 @@ import * as http from "http";
 import * as method_override from "method-override";
 import * as path from "path";
 import {config, corsSettings} from "./app/config";
-import {firebaseMessagingService} from "./app/services/firebase-messaging-service";
-import {metHuParser} from "./app/services/hungarian-omsz-alerts-parser-service";
-
-import {loggerInstance} from "./app/services/logger-service";
-
 import {IServerError} from "./app/contracts/entities";
-import {authenticationMiddleware} from "./app/rest/authentication-middleware";
-import {customMorganLogger} from "./app/rest/morgan-logger";
-import {defaultRouter} from "./app/rest/router";
-import {lightningMapsWebSocketInstance} from "./app/services/lightning-maps-data-service";
-import {socketIoService} from "./app/services/socket-io-service";
-import {stationResolverService} from "./app/services/station-resolver-service";
+import {authenticationMiddleware, customMorganLogger, defaultRouter} from "./app/rest";
+import {
+    firebaseMessagingService,
+    lightningMapsDataService,
+    loggerInstance,
+    metHuParser,
+    socketIoService,
+    stationResolverService
+} from "./app/services";
 
 require('./app/database/mongoose-extensions');
 // Set up mongoose
@@ -52,7 +51,7 @@ server.on("error", (error: IServerError) => {
     }
 });
 loggerInstance.sendNormalMessage(40, 16, "Configuration", JSON.stringify(config), false);
-lightningMapsWebSocketInstance.start();
+lightningMapsDataService.start();
 metHuParser.invoke();
 socketIoService.invoke();
 stationResolverService.start();

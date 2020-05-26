@@ -1,9 +1,5 @@
 import { IDeviceLocationLog, IStroke } from '../contracts/entities';
 
-function roundTime(time: Date) {
-   return time.getTime() - (time.getTime() % (10 * 60 * 1000));
-}
-
 export function toAllStatJson(stroke: IStroke): any[] {
    return [stroke.time.getTime(), stroke.locationData.cc];
 }

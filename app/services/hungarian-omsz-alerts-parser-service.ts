@@ -1,8 +1,8 @@
-import { loggerInstance } from './logger-service';
+import { readFileSync } from 'fs';
 
-import * as fs from 'fs';
-import { from, of as observableOf, timer, Observable, TimeInterval } from 'rxjs';
+import { from, Observable, of as observableOf, TimeInterval, timer } from 'rxjs';
 import { catchError, flatMap, map, merge, reduce, timeInterval } from 'rxjs/operators';
+
 import {
    HungarianAlertTypes,
    IAlertArea,
@@ -17,12 +17,13 @@ import { ILogger, IMetHuParser } from '../contracts/service-interfaces';
 import * as mongo from '../database/mongoose-schemes';
 import { customHttpRequestAsync, getHttpRequestAsync } from '../helpers';
 import * as fcmUtils from '../helpers/firebase-helper';
+import { loggerInstance } from './logger-service';
 
 const htmlparser2 = require('htmlparser2');
 
 class HungarianOmszAlertsParserService {
    constructor(private logger: ILogger, ticktime: number) {
-      this.metHuData = JSON.parse(fs.readFileSync('./static-json-data/metHuData.json', 'utf8')) as IMetHuData;
+      this.metHuData = JSON.parse(readFileSync('./static-json-data/metHuData.json', 'utf8')) as IMetHuData;
       this.timer = timer(0, ticktime * 1000).pipe(timeInterval());
       this.timer.subscribe((x) => this.onTimerTick());
 
@@ -87,6 +88,7 @@ class HungarianOmszAlertsParserService {
    ): Observable<IMetHuEntityWithData> {
       const linkType = type === HungarianAlertTypes.County ? 'wbhx' : 'wahx';
       return getHttpRequestAsync(
+         // tslint:disable-next-line: max-line-length
          `http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`,
          15000
       ).pipe(

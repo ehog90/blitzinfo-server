@@ -1,16 +1,16 @@
 import * as clicolor from 'cli-color';
-import * as fs from 'fs';
 import * as moment from 'moment';
 import { Subject } from 'rxjs';
 import { ILog, LogType } from '../contracts/entities';
 import { ILogger } from '../contracts/service-interfaces';
 import * as mongo from '../database/mongoose-schemes';
+import { readFileSync } from 'fs';
 
 class LoggerService implements ILogger {
    private xtermData: any;
    public logs: Subject<ILog> = new Subject<ILog>();
    constructor(private canHideSome: boolean) {
-      this.xtermData = JSON.parse(fs.readFileSync('./static-json-data/xtermData.json', 'utf8'));
+      this.xtermData = JSON.parse(readFileSync('./static-json-data/xtermData.json', 'utf8'));
    }
    private toConsoleMessage(message: ILog) {
       if (!message.canBeHidden || !this.canHideSome) {

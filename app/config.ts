@@ -1,6 +1,6 @@
 import * as commander from 'commander';
-import * as fs from 'fs';
 import { Environment, IConfig } from './contracts/entities';
+import { readFileSync } from 'fs';
 
 export const config: IConfig = {
    environment: Environment.Production,
@@ -22,7 +22,7 @@ export const corsSettings = {
    },
 };
 
-export const initObject = JSON.parse(fs.readFileSync('./init.json', 'utf8'));
+export const initObject = JSON.parse(readFileSync('./init.json', 'utf8'));
 
 commander
    .allowUnknownOption(true)

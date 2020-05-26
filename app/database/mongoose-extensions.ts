@@ -1,15 +1,13 @@
 /**
  * Created by ehog on 2017. 06. 25..
  */
-
+import { mquery } from 'mongoose';
 import { Observable } from 'rxjs';
-
-export {};
-import { mquery, DocumentQuery } from 'mongoose';
 import { fromPromise } from 'rxjs/internal-compatibility';
 
+export {};
 declare module 'mongoose' {
-   // noinspection TsLint
+   // tslint:disable-next-line: class-name
    interface mquery {
       toObservable(): Observable<any>;
 

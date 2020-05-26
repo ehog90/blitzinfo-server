@@ -3,6 +3,7 @@
    "version": "0.0.1",
    "scripts": {
       "fix-lint": "npx tslint -c tslint.conf.js -p ./ --fix",
+      "lint": "npx tslint -c tslint.conf.js -p ./",
       "rimraf": "rimraf dist",
       "copy-assets": "copyfiles \"static-json-data/*.json\" package*.json \"init-on*\" init.json dist",
       "build-webpack": "webpack --config webpack.main.app.config.js && webpack --config webpack.revgeo.app.config.js && webpack --config webpack.test-output.config.js",
@@ -53,7 +54,7 @@
       "@types/moment": "^2.13.0",
       "@types/mongoose": "^5.2.2",
       "@types/morgan": "^1.7.35",
-      "@types/node": "^10.5.5",
+      "@types/node": "^14.0.5",
       "@types/serve-static": "^1.13.2",
       "@types/socket.io": "^1.4.36",
       "@types/socket.io-client": "^1.4.32",
@@ -69,7 +70,7 @@
       "tslint": "^5.11.0",
       "tslint-config-prettier": "^1.18.0",
       "tslint-plugin-prettier": "^2.3.0",
-      "typescript": "^3.0.1",
+      "typescript": "^3.9.3",
       "webpack": "^4.16.4",
       "webpack-cli": "^3.1.0",
       "webpack-node-externals": "^1.7.2"

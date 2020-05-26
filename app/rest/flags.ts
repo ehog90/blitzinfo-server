@@ -1,5 +1,5 @@
+import { stat, readFileSync } from 'fs';
 import * as express from 'express';
-import * as fs from 'fs';
 import { IFlagsRequest } from '../contracts/entities';
 import * as mime from '../helpers/mime-helper';
 
@@ -19,11 +19,11 @@ export async function flagImage(req: IFlagsRequest, res: express.Response) {
          sizeNewRounded = 1000;
       }
       let img = req.params.cc.toLowerCase();
-      fs.exists(`./public/images/flagsConverted/webp/${sizeNewRounded}/${img}-01.${format}`, (exists) => {
+      stat(`./public/images/flagsConverted/webp/${sizeNewRounded}/${img}-01.${format}`, (exists) => {
          if (!exists) {
             img = 'xx';
          }
-         const binary = fs.readFileSync(
+         const binary = readFileSync(
             `./public/images/flagsConverted/webp/${sizeNewRounded}/${img}-01.${format}`
          );
          res.end(binary);

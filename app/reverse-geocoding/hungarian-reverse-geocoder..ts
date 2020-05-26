@@ -1,6 +1,6 @@
-import * as fs from 'fs';
 import { IHungarianRegionalInformation } from '../contracts/entities';
 import { IHungarianRegionalReverseGeoCoder } from '../contracts/service-interfaces';
+import { readFileSync } from 'fs';
 const wherewolf = require('wherewolf');
 
 /*
@@ -13,8 +13,8 @@ class HungarianRegionalReverseGeocoder implements IHungarianRegionalReverseGeoCo
    ];
    private whereWolfInstance: any;
    constructor() {
-      const countyData = JSON.parse(fs.readFileSync('./static-json-data/huCounties.json', 'utf8'));
-      const regionalUnitData = JSON.parse(fs.readFileSync('./static-json-data/huRegionalUnits.json', 'utf8'));
+      const countyData = JSON.parse(readFileSync('./static-json-data/huCounties.json', 'utf8'));
+      const regionalUnitData = JSON.parse(readFileSync('./static-json-data/huRegionalUnits.json', 'utf8'));
       this.whereWolfInstance = wherewolf();
       this.whereWolfInstance.add('county', countyData);
       this.whereWolfInstance.add('regionalUnit', regionalUnitData);

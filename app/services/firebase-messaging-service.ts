@@ -35,7 +35,7 @@ class FirebaseService implements IFirebaseService {
       return 0;
    }
 
-   private static getTrimmedStroke(stroke: IStroke): IStroke {
+   /*private static getTrimmedStroke(stroke: IStroke): IStroke {
       return {
          blitzortungId: stroke.blitzortungId,
          latLon: stroke.latLon,
@@ -43,25 +43,24 @@ class FirebaseService implements IFirebaseService {
          time: stroke.time,
          locationData: stroke.locationData,
       };
-   }
+   }*/
 
    private static async updateDatabaseAndNotifyForCurrentLocations(
       device: IDeviceLocationRecent,
       strokeWithDistance: IStrokeWithDistance
    ) {
-      const trimmedStroke = FirebaseService.getTrimmedStroke(strokeWithDistance.s);
       await mongo.LocationRecentMongoModel.update(
          {
             did: device.did,
          },
          {
-            lastInAlertZone: trimmedStroke.time,
+            lastInAlertZone: strokeWithDistance.s.time,
             lastAlert: strokeWithDistance,
          }
       );
       await mongo.LocationLogMongoModel.update(
          { _id: device.lastLogId },
-         { $push: { alerts: trimmedStroke } }
+         { $push: { alerts: strokeWithDistance } }
       );
 
       const fcmMessage: IFcmStrokeLastLocation = {
@@ -111,7 +110,6 @@ class FirebaseService implements IFirebaseService {
       savedLocation: ISavedLocation,
       strokeWithDistance: IStrokeWithSavedLocation
    ) {
-      const strokeToInsert = FirebaseService.getTrimmedStroke(strokeWithDistance.s);
       try {
          await mongo.SavedLocationMongoModel.update(
             {
@@ -120,7 +118,7 @@ class FirebaseService implements IFirebaseService {
             {
                lastInAlertZone: strokeWithDistance.s.time,
                lastAlert: strokeWithDistance,
-               $push: { alerts: strokeToInsert },
+               $push: { alerts: strokeWithDistance },
             }
          );
 

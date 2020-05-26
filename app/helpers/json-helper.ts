@@ -1,3 +1,4 @@
+import { IGeoAddress } from './../contracts/entities';
 import { IDeviceLocationLog, IStroke } from '../contracts/entities';
 
 export function toAllStatJson(stroke: IStroke): any[] {
@@ -30,11 +31,7 @@ export function toLogsJson(deviceLocation: IDeviceLocationLog): any {
       deviceLocation.timeLast.getTime(),
       deviceLocation.timeLast.getTime() - deviceLocation.timeFirst.getTime(),
       [deviceLocation.latLon[0], deviceLocation.latLon[1]],
-      deviceLocation.location.cc,
-      deviceLocation.location.smDef,
-      deviceLocation.location.suburbDef,
-      deviceLocation.location.strDef,
       parseInt((deviceLocation.accsum / deviceLocation.num).toFixed(2)),
-      flattenStrokeArray(deviceLocation.alerts),
+      flattenStrokeArray(deviceLocation.alerts.map((s) => s.s)),
    ];
 }

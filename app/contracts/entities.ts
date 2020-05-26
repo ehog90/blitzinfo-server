@@ -239,7 +239,7 @@ export interface IDeviceLocationBase {
    timeFirst: Date;
    timeLast: Date;
    latLon: number[];
-   location: IGeoAddress;
+   location: ILocationLogResult;
    did: string;
    userData: {
       uid: string;
@@ -249,7 +249,7 @@ export interface IDeviceLocationBase {
 }
 
 export interface IDeviceLocationLog extends IDeviceLocationBase {
-   alerts: IStroke[];
+   alerts: IStrokeWithDistance[];
    accsum: number;
 }
 
@@ -396,7 +396,8 @@ export interface ISavedLocation extends mongoose.Document {
    _id: mongoose.Types.ObjectId;
 }
 
-export interface IUserLogInDocument extends mongoose.Document {
+export interface IUserLogInDocument {
+   _id: mongoose.Types.ObjectId;
    time: Date;
    userAgent: string;
    ip: string;
@@ -454,7 +455,7 @@ export interface IDeviceLocationBaseDocument extends IDeviceLocationBase, mongoo
 export interface IDeviceLocationLogDocument extends IDeviceLocationLog, IDeviceLocationBaseDocument {
    _id: mongoose.Types.ObjectId;
    accsum: number;
-   alerts: IStroke[];
+   alerts: IStrokeWithDistance[];
 }
 
 export interface IDeviceLocationRecentDocument extends IDeviceLocationRecent, IDeviceLocationBaseDocument {

@@ -7,10 +7,11 @@ import { toLogsJson } from '../helpers';
 
 export async function locationLogsForUser(req: ILocationLogsRequest, res: express.Response) {
    const request = req.body;
+   const timeLast = new Date(new Date().getTime() - 7 * 24 * (60 * 60 * 1000));
    if (request.se.did !== undefined) {
       let results = await mongo.LocationLogMongoModel.find({
          did: request.se.did,
-         timeLast: { $gt: new Date().getTime() - 7 * 24 * (60 * 60 * 1000) },
+         timeLast: { $gt: timeLast },
       });
       results = _.orderBy(results, ['timeLast'], ['desc']).map((x) => toLogsJson(x));
       res.json(results);

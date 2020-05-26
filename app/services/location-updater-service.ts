@@ -43,6 +43,11 @@ export class LocationUpdaterService implements ILocationUpdater {
       deviceData: IDeviceUpdateRequestBody,
       geocodingResult: IGeoCodingResult
    ) {
+      const logResult: ILocationLogResult = {
+         geocodingResult,
+         id: null,
+      };
+
       const dataToSaveLog: IDeviceLocationLog = {
          num: 1,
          updater,
@@ -50,7 +55,7 @@ export class LocationUpdaterService implements ILocationUpdater {
          timeFirst: new Date(),
          timeLast: new Date(),
          latLon: deviceData.latLon,
-         location: geocodingResult.locationData,
+         location: logResult,
          did: deviceData.se.did,
          userData: {
             uid: deviceData.se.uid,
@@ -80,7 +85,7 @@ export class LocationUpdaterService implements ILocationUpdater {
          timeFirst: new Date(),
          timeLast: new Date(),
          latLon: deviceData.latLon,
-         location: logResult.geocodingResult.locationData,
+         location: logResult,
          did: deviceData.se.did,
          userData: {
             uid: deviceData.se.uid,
@@ -174,7 +179,7 @@ export class LocationUpdaterService implements ILocationUpdater {
                      num: 1,
                   },
                   acc: deviceData.acc,
-                  timeLast: Date.now(),
+                  timeLast: new Date(),
                   hunData: logResult.geocodingResult.hungarianData,
                   location: logResult,
                   latLon: deviceData.latLon,
@@ -205,13 +210,13 @@ export class LocationUpdaterService implements ILocationUpdater {
             { _id: existingData._id },
             {
                $inc: { num: 1, accsum: deviceData.acc },
-               timeLast: Date.now(),
+               timeLast: new Date(),
                updater,
             }
          );
          const updated = await mongo.LocationLogMongoModel.findOne({ _id: existingData._id });
          return Promise.resolve({
-            geocodingResult: { locationData: updated.location, hungarianData: updated.hunData },
+            geocodingResult: { locationData: updated.location as any, hungarianData: updated.hunData },
             id: updated._id.toString(),
          });
       } else {

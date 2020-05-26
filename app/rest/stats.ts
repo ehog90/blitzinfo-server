@@ -47,6 +47,7 @@ export function overallStats(req: express.Request, res: express.Response) {
 */
 export async function lastMinutesStatistics(req: express.Request, res: express.Response) {
    let minutes = 60;
+   const timeStart = new Date(Date.now() - (minutes + 1) * 60 * 1000);
    if (!isNaN(Number(req.params.hours))) {
       minutes = Number(req.params.hours);
    }
@@ -54,7 +55,7 @@ export async function lastMinutesStatistics(req: express.Request, res: express.R
       minutes = 2880;
    }
    const results = await mongo.MinStatMongoModel.find({
-      timeStart: { $gt: new Date().getTime() - (minutes + 1) * 60 * 1000 },
+      timeStart: { $gt: timeStart },
    }).lean();
    res.json(getFlatAllStatistics(results));
 }

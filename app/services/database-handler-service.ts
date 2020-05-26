@@ -61,8 +61,8 @@ class DatabaseHandlerService implements IDatabaseSaver {
    }
 
    private updateStatistics(savedStroke: IStroke) {
-      const tenminTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % 600000);
-      const minTime: number = savedStroke.time.getTime() - (savedStroke.time.getTime() % 60000);
+      const tenminTime = new Date(savedStroke.time.getTime() - (savedStroke.time.getTime() % 600000));
+      const minTime = new Date(savedStroke.time.getTime() - (savedStroke.time.getTime() % 60000));
       const update: any = {};
       const inc: any = {};
       inc[`data.${savedStroke.locationData.cc}.c`] = 1;

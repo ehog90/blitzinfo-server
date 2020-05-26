@@ -1,20 +1,20 @@
 /**
  * Created by ehog on 2017. 07. 16..
  */
-import * as express from "express";
-import {authTest} from "./authentication-middleware";
-import {flagImage} from "./flags";
-import {locationLogsForUser} from "./location-logs";
-import {errors} from "./logs";
-import {nearbyStrokes} from "./nearby-strokes";
-import {periodicUpdate} from "./periodic-update";
-import {getLocationsForUser, newLocationInstance, removeLocationInstance} from "./saved-locations";
-import {getStationsAsync, stationsByCountry, stationCount} from "./stations";
-import {currentUTCYearStats, lastMinutesStatistics, overallStats, tenminStats} from "./stats";
-import {login, register} from "./user-handling";
-import {welcome} from "./welcome";
+import * as express from 'express';
+import { authTest } from './authentication-middleware';
+import { flagImage } from './flags';
+import { locationLogsForUser } from './location-logs';
+import { errors } from './logs';
+import { nearbyStrokes } from './nearby-strokes';
+import { periodicUpdate } from './periodic-update';
+import { getLocationsForUser, newLocationInstance, removeLocationInstance } from './saved-locations';
+import { getStationsAsync, stationsByCountry, stationCount } from './stations';
+import { currentUTCYearStats, lastMinutesStatistics, overallStats, tenminStats } from './stats';
+import { login, register } from './user-handling';
+import { welcome } from './welcome';
 
-export const defaultRouter =  express.Router();
+export const defaultRouter = express.Router();
 
 defaultRouter.get('/', welcome);
 defaultRouter.get('/auth/test', authTest);

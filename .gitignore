@@ -9,3 +9,4 @@
 /public/images/flagsConverted/
 **/*.sensitive.ts
 **/*.sensitive.json
+ssh-dep.js

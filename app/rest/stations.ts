@@ -29,8 +29,8 @@ export function stationCount(req: any, res: express.Response) {
 }
 
 export async function getStationsAsync(req: express.Request, res: express.Response) {
-   const lat = req.query.lat || 0;
-   const lon = req.query.lon || 0;
+   const lat = Number(req.query.lat || 0);
+   const lon = Number(req.query.lon || 0);
    if (!isNaN(lat) && !isNaN(lon)) {
       const count: number = await StationsMongoModel.count({});
       const results = await StationsMongoModel.aggregate([

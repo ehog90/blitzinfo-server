@@ -10,10 +10,7 @@ export async function flagImage(req: IFlagsRequest, res: express.Response) {
    try {
       const format = 'webp';
       res.setHeader('Content-Type', mime.getMimeForExtension(format));
-      let size = 256;
-      if (!isNaN(req.params.size)) {
-         size = req.params.size;
-      }
+      const size = !isNaN(Number(req.params?.size)) ? Number(req.params?.size) : 256;
       let sizeNewRounded = Math.ceil((size * 1.2) / 50) * 50;
       if (sizeNewRounded > 1000) {
          sizeNewRounded = 1000;

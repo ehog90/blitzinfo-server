@@ -7,7 +7,7 @@ import * as geoUtils from '../helpers/geospatial-helper';
     REST: 10 perces statisztikák bizonyos órára visszamenőleg.
 */
 export async function nearbyStrokes(req: INearbyRequest, res: express.Response) {
-   if (!isNaN(req.params.lat) && !isNaN(req.params.lon)) {
+   if (!isNaN(Number(req.params.lat)) && !isNaN(Number(req.params.lon))) {
       const queryCoords: number[] = [Number(req.params.lon), Number(req.params.lat)];
       const dataWithDistance: any[] = await mongo.TtlOneHourStrokeMongoModel.aggregate([
          {

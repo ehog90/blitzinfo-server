@@ -477,25 +477,25 @@ export interface IMetHuAlertDocument extends mongoose.Document {
    _id: string;
 }
 
-export interface IFlagsRequest {
+export interface IFlagsRequest extends express.Request {
    params: {
       format: string;
-      size: number;
+      size: string;
       cc: string;
    };
 }
 
-export interface INearbyRequest {
+export interface IErrorRequest extends express.Request {
    params: {
-      lat: number;
-      lon: number;
+      type: string;
+      time: string;
    };
 }
 
-export interface IErrorRequest {
+export interface INearbyRequest extends express.Request {
    params: {
-      type: string;
-      time: number;
+      lat: string;
+      lon: string;
    };
 }
 

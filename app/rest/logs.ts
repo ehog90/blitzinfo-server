@@ -7,15 +7,14 @@ REST: A rendszernapló egy bizonyos részét adja vissza, több szűrési felté
 */
 export function errors(req: IErrorRequest, res: express.Response) {
    req.params.type = req.params.type.toUpperCase();
-   if (isNaN(req.params.time)) {
-      req.params.time = 60;
-   }
+   const type = req.params.type.toUpperCase();
+   const time = isNaN(Number(req.params?.time)) ? Number(req.params?.time) : 60;
    const query: any = {};
-   if (req.params.type !== 'ALL') {
-      query['messageParts.msgType'] = req.params.type;
+   if (type !== 'ALL') {
+      query['messageParts.msgType'] = type;
    }
    query.time = {};
-   query.time.$gt = new Date(new Date().getTime() - req.params.time * 60 * 1000);
+   query.time.$gt = new Date(new Date().getTime() - time * 60 * 1000);
 
    mongo.LogsMongoModel.where(query)
       .sort({ time: -1 })

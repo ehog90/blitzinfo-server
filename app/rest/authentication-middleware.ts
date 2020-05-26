@@ -2,8 +2,9 @@
  * Created by ehog on 2016. 11. 12..
  */
 import * as express from 'express';
+
 import { IAuthenticatedRequest } from '../contracts/entities';
-import { UserAuthentication } from '../helpers/user-auth';
+import { authUserAsync, State } from '../helpers/user-auth';
 
 export async function authenticationMiddleware(req: IAuthenticatedRequest, res: express.Response, next) {
    res.setHeader('Cache-Control', 'no-cache');
@@ -12,10 +13,10 @@ export async function authenticationMiddleware(req: IAuthenticatedRequest, res: 
    if (req.url.startsWith('/auth')) {
       try {
          const authData = { uid: req.header('X-BlitzInfo-User'), sid: req.header('X-BlitzInfo-Session') };
-         req.authContext = await UserAuthentication.authUserAsync(authData);
+         req.authContext = await authUserAsync(authData);
          next();
       } catch (exc) {
-         if (exc === UserAuthentication.State.NoUser) {
+         if (exc === State.NoUser) {
             res.statusCode = 401;
             res.json({ error: 'Unauthorized access' });
          } else {

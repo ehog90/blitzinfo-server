@@ -15,13 +15,13 @@ import {
    IStrokeDocument,
    IUserDocument,
 } from '../contracts/entities';
-import { MongoDbPrimitives } from './mongoose-primitive-scheme';
+import { GeoAddress, HunData, SunData, UserData } from './mongoose-primitive-scheme';
 
 const strokeSchema = {
    latLon: [Number],
-   locationData: MongoDbPrimitives.GeoAddress,
+   locationData: GeoAddress,
    time: Date,
-   sunData: MongoDbPrimitives.SunData,
+   sunData: SunData,
    blitzortungId: Number,
 };
 const locationSchema = {
@@ -32,9 +32,9 @@ const locationSchema = {
    latLon: { type: [Number], index: '2dsphere' },
    accsum: Number,
    did: String,
-   location: MongoDbPrimitives.GeoAddress,
-   userData: MongoDbPrimitives.UserData,
-   hunData: MongoDbPrimitives.HunData,
+   location: GeoAddress,
+   userData: UserData,
+   hunData: HunData,
    alerts: [strokeSchema],
 };
 
@@ -46,9 +46,9 @@ const locationSchemaRecent = {
    latLon: { type: [Number], index: '2dsphere' },
    acc: Number,
    did: { type: String, index: { unique: true } },
-   location: MongoDbPrimitives.GeoAddress,
-   userData: MongoDbPrimitives.UserData,
-   hunData: MongoDbPrimitives.HunData,
+   location: GeoAddress,
+   userData: UserData,
+   hunData: HunData,
    lastInAlertZone: Date,
    lastAlert: Object,
    lastLogId: mongoose.Schema.Types.ObjectId,
@@ -68,8 +68,8 @@ const mongoAlertsSchema = new mongoose.Schema(alertsSchema);
 const savedLocationsSchema = new mongoose.Schema({
    uid: mongoose.Schema.Types.ObjectId,
    latLon: { type: [Number], index: '2dsphere' },
-   location: MongoDbPrimitives.GeoAddress,
-   hunData: MongoDbPrimitives.HunData,
+   location: GeoAddress,
+   hunData: HunData,
    alerts: [strokeSchema],
    meteoAlerts: [mongoAlertsSchema],
    name: String,
@@ -111,9 +111,9 @@ const mongoLocation = new mongoose.Schema(locationSchema);
 const mongoLocationRecent = new mongoose.Schema(locationSchemaRecent);
 const mongoStrokeSchemaTtlTenMin = new mongoose.Schema({
    latLon: { type: [Number], index: '2dsphere' },
-   locationData: MongoDbPrimitives.GeoAddress,
+   locationData: GeoAddress,
    time: { type: Date },
-   sunData: MongoDbPrimitives.SunData,
+   sunData: SunData,
    blitzortungId: { type: Number, index: true },
 });
 mongoStrokeSchemaTtlTenMin.index({ time: 1 }, { expireAfterSeconds: 600 });
@@ -121,9 +121,9 @@ mongoStrokeSchemaTtlTenMin.plugin(MongooseAutoIncrementID.plugin, { modelName: '
 
 const mongoStrokeSchemaTtlOneHour = new mongoose.Schema({
    latLon: { type: [Number], index: '2dsphere' },
-   locationData: MongoDbPrimitives.GeoAddress,
+   locationData: GeoAddress,
    time: { type: Date },
-   sunData: MongoDbPrimitives.SunData,
+   sunData: SunData,
    blitzortungId: Number,
 });
 mongoStrokeSchemaTtlOneHour.plugin(MongooseAutoIncrementID.plugin, { modelName: 'ttlOneHourStrokes' });
@@ -176,7 +176,7 @@ const mongoStationsSchema = new mongoose.Schema({
    usedCnt: Number,
    detCnt: Number,
    lastSeen: Date,
-   location: MongoDbPrimitives.GeoAddress,
+   location: GeoAddress,
 });
 
 export const SettlementsModel = mongoose.model<ISettlementDocument>('settlements', mongoSettlementSchema);

@@ -1,9 +1,8 @@
-import { loggerInstance } from './logger-service';
-
 import * as http from 'http';
-import { forkJoin, timer, Observable, Subject, TimeInterval } from 'rxjs';
+import { forkJoin, Observable, Subject, TimeInterval, timer } from 'rxjs';
 import { map, timeInterval } from 'rxjs/operators';
 import * as socketIo from 'socket.io';
+
 import { config } from '../config';
 import {
    HungarianAlertTypes,
@@ -23,10 +22,18 @@ import {
 } from '../contracts/entities';
 import { IDatabaseSaver, ILocationUpdater, ILogger, ISocketIoServer } from '../contracts/service-interfaces';
 import * as mongo from '../database/mongoose-schemes';
-import { localeDb, JsonHelper, StatHelper } from '../helpers';
+import {
+   flattenStroke,
+   getFlatAllStatistics,
+   getFlatTenMinStatistics,
+   localeDb,
+   processStatResult,
+   toAllStatJson,
+} from '../helpers';
 import * as geoUtils from '../helpers/geospatial-helper';
 import { databaseSaverInstance } from './database-handler-service';
 import { locationUpdaterInstance } from './location-updater-service';
+import { loggerInstance } from './logger-service';
 
 export class SocketIoServer implements ISocketIoServer {
    constructor(
@@ -167,32 +174,32 @@ export class SocketIoServer implements ISocketIoServer {
             period: 'all',
          })
             .toObservable()
-            .pipe(map((x) => StatHelper.processStatResult(x.data))),
+            .pipe(map((x) => processStatResult(x.data))),
          mongo.AllStatMongoModel.findOne({
             isYear: true,
             period: year.toString(),
          })
             .lean()
             .toObservable()
-            .pipe(map((x: IAllStatDocument) => StatHelper.processStatResult(x.data))),
+            .pipe(map((x: IAllStatDocument) => processStatResult(x.data))),
          mongo.MinStatMongoModel.find({
             timeStart: { $gt: new Date(Date.now() - SocketIoServer.LAST_DAY) },
          })
             .lean()
             .toObservable()
-            .pipe(map((x) => StatHelper.getFlatAllStatistics(x))),
+            .pipe(map((x) => getFlatAllStatistics(x))),
          mongo.MinStatMongoModel.find({
             timeStart: { $gt: new Date(Date.now() - SocketIoServer.LAST_HOUR) },
          })
             .lean()
             .toObservable()
-            .pipe(map((x) => StatHelper.getFlatAllStatistics(x))),
+            .pipe(map((x) => getFlatAllStatistics(x))),
          mongo.TenminStatMongoModel.find({})
             .sort({ timeStart: -1 })
             .limit(SocketIoServer.STAT_HOURS * 6)
             .lean()
             .toObservable()
-            .pipe(map((x) => StatHelper.getFlatTenMinStatistics(x)))
+            .pipe(map((x) => getFlatTenMinStatistics(x)))
       ).toPromise();
       request.emit(SocketIoRooms.StatsInit, statData);
    }
@@ -322,7 +329,7 @@ export class SocketIoServer implements ISocketIoServer {
                               connection.userInfo.dtr === -1 ||
                               connection.userInfo.dtr === 0)
                         ) {
-                           const strokeArray = JsonHelper.flattenStroke(strokeDb);
+                           const strokeArray = flattenStroke(strokeDb);
                            initArray.push(strokeArray);
                         }
                      });
@@ -371,12 +378,12 @@ export class SocketIoServer implements ISocketIoServer {
                      clientGeoInformation.distance <= 10)
                ) {
                   const strokeLocalized = SocketIoServer.getLocaleName(stroke, connection.userInfo.lang);
-                  const compressedStroke = JsonHelper.flattenStroke(strokeLocalized);
+                  const compressedStroke = flattenStroke(strokeLocalized);
                   connection.emit(SocketIoRooms.Strokes, JSON.stringify(compressedStroke));
                }
             }
          } else if (connection.connectionType.indexOf(SocketIoConnectionTypes.Stat) !== -1) {
-            connection.emit(SocketIoRooms.Stats, JSON.stringify(JsonHelper.toAllStatJson(stroke)));
+            connection.emit(SocketIoRooms.Stats, JSON.stringify(toAllStatJson(stroke)));
          }
       });
    }

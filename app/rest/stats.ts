@@ -1,7 +1,8 @@
 import * as express from 'express';
+
 import { IAllStatDocument } from '../contracts/entities';
 import * as mongo from '../database/mongoose-schemes';
-import { StatHelper } from '../helpers';
+import { getFlatAllStatistics, getFlatTenMinStatistics, processStatResult } from '../helpers';
 
 /*
     REST: 10 perces statisztikák bizonyos órára visszamenőleg.
@@ -16,7 +17,7 @@ export function tenminStats(req: express.Request, res: express.Response): any {
       .limit(time * 6)
       .lean()
       .exec((error, result) => {
-         res.end(JSON.stringify(StatHelper.getFlatTenMinStatistics(result)));
+         res.end(JSON.stringify(getFlatTenMinStatistics(result)));
       });
 }
 /*
@@ -27,7 +28,7 @@ export function currentUTCYearStats(req: express.Request, res: express.Response)
    mongo.AllStatMongoModel.findOne({ isYear: true, period: year.toString() })
       .lean()
       .exec((error, result: IAllStatDocument) => {
-         res.end(JSON.stringify(StatHelper.processStatResult(result.data)));
+         res.end(JSON.stringify(processStatResult(result.data)));
       });
 }
 /*
@@ -37,7 +38,7 @@ export function overallStats(req: express.Request, res: express.Response) {
    mongo.AllStatMongoModel.findOne({ isYear: false, period: 'all' })
       .lean()
       .exec((error, result: IAllStatDocument) => {
-         res.end(JSON.stringify(StatHelper.processStatResult(result.data)));
+         res.end(JSON.stringify(processStatResult(result.data)));
       });
 }
 
@@ -55,5 +56,5 @@ export async function lastMinutesStatistics(req: express.Request, res: express.R
    const results = await mongo.MinStatMongoModel.find({
       timeStart: { $gt: new Date().getTime() - (minutes + 1) * 60 * 1000 },
    }).lean();
-   res.json(StatHelper.getFlatAllStatistics(results));
+   res.json(getFlatAllStatistics(results));
 }

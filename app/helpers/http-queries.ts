@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 const request = require('request');
 
 export function getHttpRequestAsync<T>(url: string, timeout: number): Observable<T> {
-   return Observable.create((observer) => {
+   return new Observable((observer) => {
       request({ url, json: true, timeout }, (error, response, body) => {
          if (error) {
             observer.error({ error, errorCode: -1 });
@@ -20,7 +20,7 @@ export function getHttpRequestAsync<T>(url: string, timeout: number): Observable
 }
 
 export function customHttpRequestAsync<T>(opts: RequestOptions, message: any): Observable<T> {
-   return Observable.create((observer) => {
+   return new Observable((observer) => {
       const req: any = https
          .request(opts, (res) => {
             let d;

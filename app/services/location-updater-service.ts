@@ -1,8 +1,7 @@
-import { loggerInstance } from './logger-service';
-
 import * as _ from 'lodash';
 import { interval, Subject } from 'rxjs';
 import { buffer } from 'rxjs/operators';
+
 import {
    IDeviceLocationLog,
    IDeviceLocationRecent,
@@ -23,6 +22,7 @@ import * as mongo from '../database/mongoose-schemes';
 import * as geoUtils from '../helpers/geospatial-helper';
 import { huRegReverseGeocoder } from '../reverse-geocoding';
 import * as grg from '../reverse-geocoding/google-reverse-geocoder.';
+import { loggerInstance } from './logger-service';
 
 export class LocationUpdaterService implements ILocationUpdater {
    constructor(
@@ -178,13 +178,15 @@ export class LocationUpdaterService implements ILocationUpdater {
                   $inc: {
                      num: 1,
                   },
-                  acc: deviceData.acc,
-                  timeLast: new Date(),
-                  hunData: logResult.geocodingResult.hungarianData,
-                  location: logResult,
-                  latLon: deviceData.latLon,
-                  updater,
-                  lastLogId: logResult.id,
+                  $set: {
+                     acc: deviceData.acc,
+                     timeLast: new Date(),
+                     hunData: logResult.geocodingResult.hungarianData,
+                     location: logResult,
+                     latLon: deviceData.latLon,
+                     updater,
+                     lastLogId: logResult.id,
+                  },
                }
             );
             return Promise.resolve(null);
@@ -210,8 +212,10 @@ export class LocationUpdaterService implements ILocationUpdater {
             { _id: existingData._id },
             {
                $inc: { num: 1, accsum: deviceData.acc },
-               timeLast: new Date(),
-               updater,
+               $set: {
+                  timeLast: new Date(),
+                  updater,
+               },
             }
          );
          const updated = await mongo.LocationLogMongoModel.findOne({ _id: existingData._id });

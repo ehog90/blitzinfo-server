@@ -66,7 +66,7 @@ class StationResolver implements IStationResolver {
       loggerInstance.sendNormalMessage(0, 0, `Stations`, `Station metadata updated.`, false);
    }
 
-   private async stationUpdateRequested() {
+   private stationUpdateRequested() {
       merge(this.jsonUrls, 1)
          .pipe(
             flatMap((url) =>

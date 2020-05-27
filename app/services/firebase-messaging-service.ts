@@ -1,6 +1,5 @@
-import { loggerInstance } from './logger-service';
-
 import { Subject } from 'rxjs';
+
 import {
    IDeviceLocationRecent,
    IFcmStrokeLastLocation,
@@ -15,6 +14,7 @@ import * as mongo from '../database/mongoose-schemes';
 import { customHttpRequestAsync, firebaseSettings } from '../helpers';
 import * as geoUtils from '../helpers/geospatial-helper';
 import { databaseSaverInstance } from './database-handler-service';
+import { loggerInstance } from './logger-service';
 
 class FirebaseService implements IFirebaseService {
    constructor(private logger: ILogger, databaseSaver: IDatabaseSaver) {
@@ -54,8 +54,10 @@ class FirebaseService implements IFirebaseService {
             did: device.did,
          },
          {
-            lastInAlertZone: strokeWithDistance.s.time,
-            lastAlert: strokeWithDistance,
+            $set: {
+               lastInAlertZone: strokeWithDistance.s.time,
+               lastAlert: strokeWithDistance,
+            },
          }
       );
       await mongo.LocationLogMongoModel.update(
@@ -85,7 +87,9 @@ class FirebaseService implements IFirebaseService {
             did: device.did,
          },
          {
-            lastInAlertZone: strokeWithDistance.s.time,
+            $set: {
+               lastInAlertZone: strokeWithDistance.s.time,
+            },
          },
          () => {}
       );
@@ -100,7 +104,9 @@ class FirebaseService implements IFirebaseService {
             _id: savedLocation._id,
          },
          {
-            lastInAlertZone: strokeWithDistance.s.time,
+            $set: {
+               lastInAlertZone: strokeWithDistance.s.time,
+            },
          },
          () => {}
       );
@@ -116,9 +122,11 @@ class FirebaseService implements IFirebaseService {
                _id: savedLocation._id,
             },
             {
-               lastInAlertZone: strokeWithDistance.s.time,
-               lastAlert: strokeWithDistance,
-               $push: { alerts: strokeWithDistance },
+               $set: {
+                  lastInAlertZone: strokeWithDistance.s.time,
+                  lastAlert: strokeWithDistance,
+                  $push: { alerts: strokeWithDistance },
+               },
             }
          );
 

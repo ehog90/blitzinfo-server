@@ -588,3 +588,17 @@ export interface IStationsFromWeb {
    latLon: number[];
    name: string;
 }
+
+export interface ILightningmapsStationData {
+   user: string;
+   stations: { [key: string]: ILightningMapsStationInfo };
+}
+
+export interface ILightningMapsStationInfo {
+   0: number;
+   1: number;
+   a: string;
+   c: string;
+   C: string;
+   s: string;
+}

@@ -22,7 +22,7 @@
       "gm": "^1.23.1",
       "htmlparser2": "^3.10.1",
       "kareem": "^2.3.1",
-      "lodash": "^4.17.15",
+      "lodash": "^4.17.19",
       "method-override": "^3.0.0",
       "moment": "^2.26.0",
       "mongoose": "^5.9.16",

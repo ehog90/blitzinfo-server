@@ -174,7 +174,7 @@ export class SocketIoServer implements ISocketIoServer {
             period: 'all',
          })
             .toObservable()
-            .pipe(map((x) => processStatResult(x.data))),
+            .pipe(map((x: any) => processStatResult(x.data))),
          mongo.AllStatMongoModel.findOne({
             isYear: true,
             period: year.toString(),
@@ -224,9 +224,7 @@ export class SocketIoServer implements ISocketIoServer {
          return false;
       }
       initializationMessage.dirs.forEach((x) => {
-         if (isNaN(x)) {
-            return false;
-         }
+         return !isNaN(x)
       });
       return true;
    }

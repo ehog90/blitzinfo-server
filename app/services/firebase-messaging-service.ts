@@ -90,8 +90,7 @@ class FirebaseService implements IFirebaseService {
             $set: {
                lastInAlertZone: strokeWithDistance.s.time,
             },
-         },
-         () => {}
+         }
       );
    }
 
@@ -108,7 +107,6 @@ class FirebaseService implements IFirebaseService {
                lastInAlertZone: strokeWithDistance.s.time,
             },
          },
-         () => {}
       );
    }
 

@@ -1,6 +1,6 @@
 ﻿for($s=50;$s -le 1000; $s+= 50) 
 {
-    echo Convert $s
+    Write-Output Convert $s
     #New-Item -ItemType Directory -Force -Path .\flagsConverted\png\$s
     New-Item -ItemType Directory -Force -Path .\flagsConverted\webp\$s
 	$flags = Get-ChildItem .\flagsOriginal

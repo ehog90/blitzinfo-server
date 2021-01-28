@@ -1,5 +1,6 @@
 import * as express from 'express';
 import * as mongoose from 'mongoose';
+
 import {
    IUserDocument,
    IUserLoginRequest,
@@ -37,7 +38,7 @@ export function login(req: express.Request, res: express.Response) {
                         sessionId: mongooseId.toString(),
                      };
                      res.json(response);
-                     mongo.UserMongoModel.update(
+                     mongo.UserMongoModel.updateOne(
                         { _id: userData._id },
                         {
                            $push: {

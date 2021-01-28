@@ -15,8 +15,8 @@ export function isInDirection(dirs: number[], bearing: number): boolean {
    if (dirs.length === 0) {
       return true;
    } else {
-      for (let i = 0; i < dirs.length; ++i) {
-         if (bearing >= dirs[i] && bearing <= dirs[i] + 45) {
+      for (let dir of dirs) {
+         if (bearing >= dir && bearing <= dir + 45) {
             return true;
          }
       }

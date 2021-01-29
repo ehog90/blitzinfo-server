@@ -7,6 +7,8 @@ import { getHttpRequestAsync } from '../helpers';
 import { googleMapsApiKey } from '../sensitive-data/api-key.sensitive';
 
 class GoogleReverseGeocoder implements IReverseGeoCoderAsync {
+   // #region Public Methods (1)
+
    public async getGeoInformation(latLonPair: number[]): Promise<IGeoAddress> {
       try {
          const url = `https://maps.googleapis.com/maps/api/geocode/json?
@@ -60,6 +62,8 @@ class GoogleReverseGeocoder implements IReverseGeoCoderAsync {
          return Promise.reject(error);
       }
    }
+
+   // #endregion Public Methods (1)
 }
 
 export const googleReverseGeoCoder = new GoogleReverseGeocoder();

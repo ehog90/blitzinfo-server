@@ -1,34 +1,36 @@
-import { loggerInstance } from './logger-service';
-
 import { uniqWith } from 'lodash';
-import { interval, timer, Observable, Subject, Subscription, TimeInterval } from 'rxjs';
+import { interval, Observable, Subject, Subscription, TimeInterval, timer } from 'rxjs';
 import { buffer, timeInterval } from 'rxjs/operators';
 import * as websocket from 'websocket';
+
 import { config, initObject } from '../config';
-import {
-   IIdAndDate,
-   ILightningMapsStroke,
-   ILightningMapsStrokeBulk,
-   ISocketInitialization,
-} from '../contracts/entities';
+import { IIdAndDate, ILightningMapsStroke, ILightningMapsStrokeBulk, ISocketInitialization } from '../contracts/entities';
 import { ILightningMapsWebSocket, ILogger } from '../contracts/service-interfaces';
+import { loggerInstance } from './logger-service';
 
 class LightningMapsDataService implements ILightningMapsWebSocket {
-   public initializationObject: ISocketInitialization;
-   private blitzortungWebSocket: websocket.client;
+   // #region Properties (15)
+
    private blitzortungConnection: websocket.connection;
-   public timeoutInSec: number;
+   private blitzortungWebSocket: websocket.client;
+   private duplicatedData: Subject<ILightningMapsStroke>;
+   private processedStrokes: Array<IIdAndDate>;
+   private reconnectSubscription: Subscription;
+   private reconnectTimer: Observable<TimeInterval<number>>;
+   private timeoutCheckerTimer: Observable<TimeInterval<number>>;
+   private timerSubscription: Subscription;
+   private url: string;
+
+   public initializationObject: ISocketInitialization;
+   public lastReceived: Subject<ILightningMapsStroke>;
    public lastStroke: ILightningMapsStroke;
    public lastTimeWhenReceived: number;
-   public lastReceived: Subject<ILightningMapsStroke>;
    public strokeEventChannel: Subject<any>;
-   private processedStrokes: Array<IIdAndDate>;
-   private timeoutCheckerTimer: Observable<TimeInterval<number>>;
-   private reconnectTimer: Observable<TimeInterval<number>>;
-   private duplicatedData: Subject<ILightningMapsStroke>;
-   private timerSubscription: Subscription;
-   private reconnectSubscription: Subscription;
-   private url: string;
+   public timeoutInSec: number;
+
+   // #endregion Properties (15)
+
+   // #region Constructors (1)
 
    constructor(private logger: ILogger, timeoutInSec: number, url: string) {
       this.initializationObject = initObject;
@@ -44,6 +46,8 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
          timeInterval()
       );
       this.reconnectTimer = timer(46800000, 46800000).pipe(timeInterval());
+      this.timerSubscription?.unsubscribe();
+      this.reconnectSubscription?.unsubscribe();
       this.timerSubscription = this.timeoutCheckerTimer.subscribe((x) => this.timeoutTimerSubscription());
       this.reconnectSubscription = this.reconnectTimer.subscribe((x) => this.reconnectTimerSubscription());
       this.duplicatedData.pipe(buffer(interval(1000))).subscribe((strokes) => {
@@ -59,52 +63,9 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
       });
    }
 
-   private reconnectTimerSubscription() {
-      this.initializeWebSocket();
-      this.logger.sendNormalMessage(0, 0, 'LightningMaps Socket', `Socket reopened.`, false);
-   }
+   // #endregion Constructors (1)
 
-   private timeoutTimerSubscription() {
-      const timeSinceLast = (new Date().getTime() - this.lastTimeWhenReceived) / 1000;
-      this.processedStrokes = this.processedStrokes.filter((x) => x.time >= new Date().getTime() - 60000);
-
-      if (timeSinceLast > this.timeoutInSec) {
-         try {
-            this.blitzortungConnection.close();
-            this.logger.sendNormalMessage(
-               165,
-               11,
-               'Lightning Maps Websocket',
-               'Websocket disconnected.',
-               false
-            );
-         } catch (exc) {
-         } finally {
-            this.strokeEventChannel.next(0);
-            this.logger.sendWarningMessage(
-               165,
-               11,
-               'Lightning Maps Websocket',
-               'Websocket reconnection attempt.',
-               false
-            );
-            this.initializeWebSocket();
-            this.blitzortungWebSocket.connect(this.url);
-         }
-      }
-   }
-
-   public start(): void {
-      this.logger.sendWarningMessage(
-         0,
-         0,
-         'Lightning Maps Websocket',
-         'Initializadtion message: ' + JSON.stringify(this.initializationObject),
-         false
-      );
-      this.initializeWebSocket();
-      this.blitzortungWebSocket.connect(this.url);
-   }
+   // #region Public Methods (2)
 
    public isStrokeCorrect(stroke: ILightningMapsStroke): boolean {
       return (
@@ -121,14 +82,21 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
       );
    }
 
-   private isStrokeAlreadyProcessed(stroke: ILightningMapsStroke): boolean {
-      for (const x of this.processedStrokes) {
-         if (stroke.id === x.id) {
-            return true;
-         }
-      }
-      return false;
+   public start(): void {
+      this.logger.sendWarningMessage(
+         0,
+         0,
+         'Lightning Maps Websocket',
+         'Initializadtion message: ' + JSON.stringify(this.initializationObject),
+         false
+      );
+      this.initializeWebSocket();
+      this.blitzortungWebSocket.connect(this.url);
    }
+
+   // #endregion Public Methods (2)
+
+   // #region Private Methods (4)
 
    private initializeWebSocket(): void {
       if (this.blitzortungConnection) {
@@ -212,6 +180,52 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
          }
       });
    }
+
+   private isStrokeAlreadyProcessed(stroke: ILightningMapsStroke): boolean {
+      for (const x of this.processedStrokes) {
+         if (stroke.id === x.id) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   private reconnectTimerSubscription() {
+      this.initializeWebSocket();
+      this.logger.sendNormalMessage(0, 0, 'LightningMaps Socket', `Socket reopened.`, false);
+   }
+
+   private timeoutTimerSubscription() {
+      const timeSinceLast = (new Date().getTime() - this.lastTimeWhenReceived) / 1000;
+      this.processedStrokes = this.processedStrokes.filter((x) => x.time >= new Date().getTime() - 60000);
+
+      if (timeSinceLast > this.timeoutInSec) {
+         try {
+            this.blitzortungConnection.close();
+            this.logger.sendNormalMessage(
+               165,
+               11,
+               'Lightning Maps Websocket',
+               'Websocket disconnected.',
+               false
+            );
+         } catch (exc) {
+         } finally {
+            this.strokeEventChannel.next(0);
+            this.logger.sendWarningMessage(
+               165,
+               11,
+               'Lightning Maps Websocket',
+               'Websocket reconnection attempt.',
+               false
+            );
+            this.initializeWebSocket();
+            this.blitzortungWebSocket.connect(this.url);
+         }
+      }
+   }
+
+   // #endregion Private Methods (4)
 }
 
 export const lightningMapsDataService: ILightningMapsWebSocket = new LightningMapsDataService(

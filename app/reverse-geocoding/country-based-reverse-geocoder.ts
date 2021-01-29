@@ -1,11 +1,18 @@
 import { readFileSync } from 'fs';
+
 import { ICountryReverseGeoCodeResult } from '../contracts/entities';
 import { ICountryReverseGeoCoderAsync } from '../contracts/service-interfaces';
 
 const wherewolf = require('wherewolf');
 
 class CountryBasedReverseGeocoder implements ICountryReverseGeoCoderAsync {
+   // #region Properties (1)
+
    private whereWolfInstance: any;
+
+   // #endregion Properties (1)
+
+   // #region Constructors (1)
 
    constructor() {
       const countryDataTopoJson = JSON.parse(readFileSync('./static-json-data/countryData.json', 'utf8'));
@@ -14,6 +21,10 @@ class CountryBasedReverseGeocoder implements ICountryReverseGeoCoderAsync {
       this.whereWolfInstance.add('cc', countryDataTopoJson);
       this.whereWolfInstance.add('sea', seaDataGeoJson);
    }
+
+   // #endregion Constructors (1)
+
+   // #region Public Methods (1)
 
    public getCountryData(latLonPair: number[]): Promise<ICountryReverseGeoCodeResult> {
       const result = { cc: 'xx', seaData: null };
@@ -28,6 +39,8 @@ class CountryBasedReverseGeocoder implements ICountryReverseGeoCoderAsync {
       }
       return Promise.resolve(result);
    }
+
+   // #endregion Public Methods (1)
 }
 
 export const countryReverseGeocoderAsync: ICountryReverseGeoCoderAsync = new CountryBasedReverseGeocoder();

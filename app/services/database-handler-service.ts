@@ -11,14 +11,52 @@ import { reverseGeocoderService } from '../reverse-geocoding';
 import { loggerInstance } from './logger-service';
 
 class DatabaseHandlerService implements IDatabaseSaver {
-   public lastSavedStroke: Subject<IStroke>;
-   public isDupeChecking: boolean;
-   private serverEventChannel: Subject<any>;
+   // #region Properties (4)
+
    private dupeCheckerTimeoutTimer: Observable<TimeInterval<number>>;
+   private serverEventChannel: Subject<any>;
+
+   public isDupeChecking: boolean;
+   public lastSavedStroke: Subject<IStroke>;
+
+   // #endregion Properties (4)
+
+   // #region Constructors (1)
 
    constructor(private logger: ILogger, private reverseGeoCoder: IReverseGeoCoderService) {
       this.setUpGeocoder(reverseGeoCoder);
       this.lastSavedStroke = new Subject<IStroke>();
+   }
+
+   // #endregion Constructors (1)
+
+   // #region Private Methods (8)
+
+   private enableDupeChecking(): void {
+      this.isDupeChecking = true;
+      this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking enforced.', false);
+      this.initializeTimer();
+   }
+
+   private initializeTimer(): void {
+      const timerInterval = config.dbDupeCheckingTimeout * 1000;
+      this.dupeCheckerTimeoutTimer = timer(timerInterval, timerInterval).pipe(timeInterval());
+      this.dupeCheckerTimeoutTimer.pipe(take(1)).subscribe((x) => this.unlockDupeChecker());
+   }
+
+   private onEventReceived(): void {
+      this.enableDupeChecking();
+   }
+
+   private saveStroke(stroke: IStroke) {
+      const strokeToInsert = new mongo.AllStrokeMongoModel(stroke);
+      const strokeToInsertTtlTenMin = new mongo.TtlTenMinStrokeMongoModel(stroke);
+      const strokeToInsertTtlOneHour = new mongo.TtlOneHourStrokeMongoModel(stroke);
+      strokeToInsert.save().then((savedStroke) => {
+         this.updateStatistics(savedStroke as IStroke);
+         strokeToInsertTtlTenMin.save((error) => logMongoErrors(error));
+         strokeToInsertTtlOneHour.save((error) => logMongoErrors(error));
+      });
    }
 
    private setUpGeocoder(reverseGeoCoder: IReverseGeoCoderService) {
@@ -47,15 +85,9 @@ class DatabaseHandlerService implements IDatabaseSaver {
       }
    }
 
-   private saveStroke(stroke: IStroke) {
-      const strokeToInsert = new mongo.AllStrokeMongoModel(stroke);
-      const strokeToInsertTtlTenMin = new mongo.TtlTenMinStrokeMongoModel(stroke);
-      const strokeToInsertTtlOneHour = new mongo.TtlOneHourStrokeMongoModel(stroke);
-      strokeToInsert.save().then((savedStroke) => {
-         this.updateStatistics(savedStroke as IStroke);
-         strokeToInsertTtlTenMin.save((error) => logMongoErrors(error));
-         strokeToInsertTtlOneHour.save((error) => logMongoErrors(error));
-      });
+   private unlockDupeChecker() {
+      this.isDupeChecking = false;
+      this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking ended.', false);
    }
 
    private async updateStatistics(savedStroke: IStroke) {
@@ -96,26 +128,7 @@ class DatabaseHandlerService implements IDatabaseSaver {
       );
    }
 
-   private initializeTimer(): void {
-      const timerInterval = config.dbDupeCheckingTimeout * 1000;
-      this.dupeCheckerTimeoutTimer = timer(timerInterval, timerInterval).pipe(timeInterval());
-      this.dupeCheckerTimeoutTimer.pipe(take(1)).subscribe((x) => this.unlockDupeChecker());
-   }
-
-   private unlockDupeChecker() {
-      this.isDupeChecking = false;
-      this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking ended.', false);
-   }
-
-   private enableDupeChecking(): void {
-      this.isDupeChecking = true;
-      this.logger.sendWarningMessage(0, 0, 'Database saver', 'Dupe checking enforced.', false);
-      this.initializeTimer();
-   }
-
-   private onEventReceived(): void {
-      this.enableDupeChecking();
-   }
+   // #endregion Private Methods (8)
 }
 
 export const databaseSaverInstance: IDatabaseSaver = new DatabaseHandlerService(

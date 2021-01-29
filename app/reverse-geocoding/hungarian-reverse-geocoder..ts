@@ -1,17 +1,27 @@
+import { readFileSync } from 'fs';
+
 import { IHungarianRegionalInformation } from '../contracts/entities';
 import { IHungarianRegionalReverseGeoCoder } from '../contracts/service-interfaces';
-import { readFileSync } from 'fs';
+
 const wherewolf = require('wherewolf');
 
 /*
     magyarországi megyét, és járást meghatározó osztály.
 */
 class HungarianRegionalReverseGeocoder implements IHungarianRegionalReverseGeoCoder {
+   // #region Properties (2)
+
    private static hungarianBoundingBox: number[][] = [
       [16.1138867, 45.737128],
       [22.8974573, 48.585257],
    ];
+
    private whereWolfInstance: any;
+
+   // #endregion Properties (2)
+
+   // #region Constructors (1)
+
    constructor() {
       const countyData = JSON.parse(readFileSync('./static-json-data/huCounties.json', 'utf8'));
       const regionalUnitData = JSON.parse(readFileSync('./static-json-data/huRegionalUnits.json', 'utf8'));
@@ -19,6 +29,10 @@ class HungarianRegionalReverseGeocoder implements IHungarianRegionalReverseGeoCo
       this.whereWolfInstance.add('county', countyData);
       this.whereWolfInstance.add('regionalUnit', regionalUnitData);
    }
+
+   // #endregion Constructors (1)
+
+   // #region Public Methods (1)
 
    public getRegionalInformation(latLonPair: number[]): Promise<IHungarianRegionalInformation> {
       if (
@@ -46,5 +60,7 @@ class HungarianRegionalReverseGeocoder implements IHungarianRegionalReverseGeoCo
          return Promise.resolve({ isInHungary: false });
       }
    }
+
+   // #endregion Public Methods (1)
 }
 export const huRegReverseGeocoder: IHungarianRegionalReverseGeoCoder = new HungarianRegionalReverseGeocoder();

@@ -35,6 +35,22 @@ import { locationUpdaterInstance } from './location-updater-service';
 import { loggerInstance } from './logger-service';
 
 export class SocketIoServer implements ISocketIoServer {
+   // #region Properties (8)
+
+   private httpServer: http.Server;
+   private lastDataFromDatabase: Subject<IStroke>;
+   private socketIoServer: socketIo.Server;
+   private statUpdaterTimer: Observable<TimeInterval<number>>;
+
+   public static LAST_DAY = 1000 * 60 * 60 * 24;
+   public static LAST_HOUR = 1000 * 60 * 60;
+   public static MAXIMAL_DATA = 400;
+   public static STAT_HOURS = 24;
+
+   // #endregion Properties (8)
+
+   // #region Constructors (1)
+
    constructor(
       private logger: ILogger,
       private databaseSaver: IDatabaseSaver,
@@ -60,14 +76,22 @@ export class SocketIoServer implements ISocketIoServer {
       this.statUpdaterTimer.subscribe((x) => this.statUpdateTriggered());
    }
 
-   public static STAT_HOURS = 24;
-   public static MAXIMAL_DATA = 400;
-   public static LAST_HOUR = 1000 * 60 * 60;
-   public static LAST_DAY = 1000 * 60 * 60 * 24;
-   private socketIoServer: socketIo.Server;
-   private lastDataFromDatabase: Subject<IStroke>;
-   private httpServer: http.Server;
-   private statUpdaterTimer: Observable<TimeInterval<number>>;
+   // #endregion Constructors (1)
+
+   // #region Public Methods (1)
+
+   public invoke(): void {}
+
+   // #endregion Public Methods (1)
+
+   // #region Private Static Methods (3)
+
+   private static getLocaleName(stroke: IStroke, locale: string): IStroke {
+      if (locale && localeDb[locale] !== undefined && stroke.locationData[`sm_${locale}`]) {
+         stroke.locationData.smDef = stroke.locationData[`sm_${locale}`];
+      }
+      return stroke;
+   }
 
    private static async onLogRequestReceived(connection: StrokeSocket) {
       connection.connectionType.push(SocketIoConnectionTypes.Log);
@@ -108,20 +132,9 @@ export class SocketIoServer implements ISocketIoServer {
       }
    }
 
-   private static getLocaleName(stroke: IStroke, locale: string): IStroke {
-      if (locale && localeDb[locale] !== undefined && stroke.locationData[`sm_${locale}`]) {
-         stroke.locationData.smDef = stroke.locationData[`sm_${locale}`];
-      }
-      return stroke;
-   }
+   // #endregion Private Static Methods (3)
 
-   private onServerError(error: Error) {
-      this.logger.sendErrorMessage(0, 0, 'Socket.IO Server', JSON.stringify(error), false);
-      if (error.name === 'EADDRINUSE') {
-         this.logger.sendErrorMessage(0, 0, 'Socket.IO Server', `Fatal error, the port is in use.`, false);
-         process.exit(1);
-      }
-   }
+   // #region Private Methods (14)
 
    private getAllSockets(): Array<StrokeSocket> {
       const sockets = this.socketIoServer.nsps['/'].connected;
@@ -132,6 +145,25 @@ export class SocketIoServer implements ISocketIoServer {
          }
       }
       return socketsArray;
+   }
+
+   private getLocaleNames(strokes: Array<IStroke>, locale: string): Array<IStroke> {
+      if (locale && !localeDb[locale]) {
+         strokes.map((stroke) => SocketIoServer.getLocaleName(stroke, locale));
+      }
+      return strokes;
+   }
+
+   private logsReceived(log: ILog): void {
+      this.getAllSockets().forEach((connection) => {
+         if (connection.connectionType.indexOf(SocketIoConnectionTypes.Log) !== -1) {
+            connection.emit(SocketIoRooms.Logging, log);
+         }
+      });
+   }
+
+   private onClientDisconnected() {
+      this.logger.sendNormalMessage(0, 94, 'Socket.IO server', `User disconnected`, false);
    }
 
    private onConnectionRequest(request: StrokeSocket) {
@@ -149,32 +181,12 @@ export class SocketIoServer implements ISocketIoServer {
       request.on('disconnect', (connection) => this.onClientDisconnected());
    }
 
-   private statUpdateTriggered(): void {
-      this.getAllSockets().forEach((connection) => {
-         if (connection.connectionType.indexOf(SocketIoConnectionTypes.Stat) !== -1) {
-            this.onStatQueryRequested(connection, connection.allStatInfo);
-         }
-      });
-   }
-
-   private queryOverallStats(isYear = false, period: string = 'all'): Promise<any> {
-      return mongo.AllStatMongoModel.findOne({
-         isYear,
-         period,
-      }).then((result) => processStatResult(result.data));
-   }
-
-   private queryMinStats(interval: number): Promise<any[][]> {
-      return mongo.MinStatMongoModel.find({
-         timeStart: { $gt: new Date(Date.now() - interval) },
-      }).then((result) => getFlatAllStatistics(result));
-   }
-
-   private queryTenMinStats(): Promise<any[]> {
-      return mongo.TenminStatMongoModel.find({})
-         .sort({ timeStart: -1 })
-         .limit(SocketIoServer.STAT_HOURS * 6)
-         .then((result) => getFlatTenMinStatistics(result));
+   private onServerError(error: Error) {
+      this.logger.sendErrorMessage(0, 0, 'Socket.IO Server', JSON.stringify(error), false);
+      if (error.name === 'EADDRINUSE') {
+         this.logger.sendErrorMessage(0, 0, 'Socket.IO Server', `Fatal error, the port is in use.`, false);
+         process.exit(1);
+      }
    }
 
    private async onStatQueryRequested(request: StrokeSocket, message: any) {
@@ -195,38 +207,6 @@ export class SocketIoServer implements ISocketIoServer {
          this.queryTenMinStats(),
       ]);
       request.emit(SocketIoRooms.StatsInit, statData);
-   }
-
-   private logsReceived(log: ILog): void {
-      this.getAllSockets().forEach((connection) => {
-         if (connection.connectionType.indexOf(SocketIoConnectionTypes.Log) !== -1) {
-            connection.emit(SocketIoRooms.Logging, log);
-         }
-      });
-   }
-
-   private validateInitializationMessage(initializationMessage: IInitializationMessage): boolean {
-      if (
-         initializationMessage.latLon === undefined ||
-         initializationMessage.latLon.length !== 2 ||
-         isNaN(initializationMessage.latLon[0]) ||
-         isNaN(initializationMessage.latLon[0])
-      ) {
-         return false;
-      } else if (initializationMessage.dirs === undefined) {
-         return false;
-      }
-      initializationMessage.dirs.forEach((x) => {
-         return !isNaN(x);
-      });
-      return true;
-   }
-
-   private getLocaleNames(strokes: Array<IStroke>, locale: string): Array<IStroke> {
-      if (locale && !localeDb[locale]) {
-         strokes.map((stroke) => SocketIoServer.getLocaleName(stroke, locale));
-      }
-      return strokes;
    }
 
    private async onStrokesInitReceived(connection: StrokeSocket, message: any) {
@@ -350,6 +330,34 @@ export class SocketIoServer implements ISocketIoServer {
       } catch (exc) {}
    }
 
+   private queryMinStats(interval: number): Promise<any[][]> {
+      return mongo.MinStatMongoModel.find({
+         timeStart: { $gt: new Date(Date.now() - interval) },
+      }).then((result) => getFlatAllStatistics(result));
+   }
+
+   private queryOverallStats(isYear = false, period: string = 'all'): Promise<any> {
+      return mongo.AllStatMongoModel.findOne({
+         isYear,
+         period,
+      }).then((result) => processStatResult(result.data));
+   }
+
+   private queryTenMinStats(): Promise<any[]> {
+      return mongo.TenminStatMongoModel.find({})
+         .sort({ timeStart: -1 })
+         .limit(SocketIoServer.STAT_HOURS * 6)
+         .then((result) => getFlatTenMinStatistics(result));
+   }
+
+   private statUpdateTriggered(): void {
+      this.getAllSockets().forEach((connection) => {
+         if (connection.connectionType.indexOf(SocketIoConnectionTypes.Stat) !== -1) {
+            this.onStatQueryRequested(connection, connection.allStatInfo);
+         }
+      });
+   }
+
    private strokeReceived(stroke: IStroke): void {
       this.getAllSockets().forEach((connection) => {
          if (connection.connectionType.indexOf(SocketIoConnectionTypes.Strokes) !== -1) {
@@ -379,11 +387,24 @@ export class SocketIoServer implements ISocketIoServer {
       });
    }
 
-   public invoke(): void {}
-
-   private onClientDisconnected() {
-      this.logger.sendNormalMessage(0, 94, 'Socket.IO server', `User disconnected`, false);
+   private validateInitializationMessage(initializationMessage: IInitializationMessage): boolean {
+      if (
+         initializationMessage.latLon === undefined ||
+         initializationMessage.latLon.length !== 2 ||
+         isNaN(initializationMessage.latLon[0]) ||
+         isNaN(initializationMessage.latLon[0])
+      ) {
+         return false;
+      } else if (initializationMessage.dirs === undefined) {
+         return false;
+      }
+      initializationMessage.dirs.forEach((x) => {
+         return !isNaN(x);
+      });
+      return true;
    }
+
+   // #endregion Private Methods (14)
 }
 
 export const socketIoService: ISocketIoServer = new SocketIoServer(

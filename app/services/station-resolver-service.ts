@@ -11,14 +11,20 @@ import { lightningMapsDataService } from './lightning-maps-data-service';
 import { loggerInstance } from './logger-service';
 
 class StationResolver implements IStationResolver {
-   private readonly tick = 1000 * 60 * 60 * 2;
+   // #region Properties (3)
+
    private readonly jsonUrls = [
       'http://www.lightningmaps.org/blitzortung/europe/index.php?stations_json',
       'http://www.lightningmaps.org/blitzortung/america/index.php?stations_json',
       'http://www.lightningmaps.org/blitzortung/oceania/index.php?stations_json',
    ];
+   private readonly tick = 1000 * 60 * 60 * 2;
 
    private timer: Observable<TimeInterval<number>>;
+
+   // #endregion Properties (3)
+
+   // #region Public Methods (1)
 
    public start(): void {
       this.timer = timer(5000, this.tick).pipe(timeInterval());
@@ -36,6 +42,10 @@ class StationResolver implements IStationResolver {
          bulk.execute();
       });
    }
+
+   // #endregion Public Methods (1)
+
+   // #region Private Methods (2)
 
    private async stationDataReceived(stationsData: IStationsFromWeb[]) {
       loggerInstance.sendNormalMessage(
@@ -88,6 +98,8 @@ class StationResolver implements IStationResolver {
          )
          .subscribe(this.stationDataReceived);
    }
+
+   // #endregion Private Methods (2)
 }
 
 export const stationResolverService: IStationResolver = new StationResolver();

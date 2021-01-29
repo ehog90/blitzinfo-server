@@ -21,6 +21,17 @@ import { loggerInstance } from './logger-service';
 const htmlparser2 = require('htmlparser2');
 
 class HungarianOmszAlertsParserService {
+   // #region Properties (4)
+
+   private countyHtmlParser: any;
+   private metHuData: IMetHuData;
+   private regionalUnitHtmlParser: any;
+   private timer: Observable<TimeInterval<number>>;
+
+   // #endregion Properties (4)
+
+   // #region Constructors (1)
+
    constructor(private logger: ILogger, ticktime: number) {
       this.metHuData = JSON.parse(readFileSync('./static-json-data/metHuData.json', 'utf8')) as IMetHuData;
       this.timer = timer(0, ticktime * 1000).pipe(timeInterval());
@@ -60,47 +71,15 @@ class HungarianOmszAlertsParserService {
       this.regionalUnitHtmlParser = new htmlparser2.Parser(regionalUnitHtmlHandler);
    }
 
-   private timer: Observable<TimeInterval<number>>;
-   private metHuData: IMetHuData;
-   private countyHtmlParser: any;
-   private regionalUnitHtmlParser: any;
+   // #endregion Constructors (1)
 
-   private log(message: string, bgColor: number = 227, fgColor: number = 16, canBeHidden = false) {
-      this.logger.sendErrorMessage(bgColor, fgColor, 'met.hu parser', message, canBeHidden);
-   }
+   // #region Public Methods (1)
 
-   private static async notify(locations: Array<IDeviceLocationRecent>, alertArea: IAlertArea) {
-      if (locations.length !== 0) {
-         const fcmBase: IFcmBase = {
-            registration_ids: locations.map((x) => x.did),
-            time_to_live: 1800,
-            data: {
-               message: {
-                  mtype: 'ALERT',
-                  data: alertArea,
-               },
-            },
-         };
-         await customHttpRequestAsync(fcmUtils.firebaseSettings, fcmBase).toPromise();
-      }
-   }
+   public invoke(): void {}
 
-   private static getDataFromMetDotHu(
-      code: number,
-      type: HungarianAlertTypes
-   ): Observable<IMetHuEntityWithData> {
-      const linkType = type === HungarianAlertTypes.County ? 'wbhx' : 'wahx';
-      return getHttpRequestAsync(
-         // tslint:disable-next-line: max-line-length
-         `http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`,
-         15000
-      ).pipe(
-         map((rawData) => {
-            return { type, code, data: rawData };
-         }),
-         catchError(() => observableOf(null))
-      );
-   }
+   // #endregion Public Methods (1)
+
+   // #region Private Static Methods (3)
 
    private static getAlertCode(event: string): MeteoEvents {
       if (event === 'Heves zivatar') {
@@ -131,6 +110,133 @@ class HungarianOmszAlertsParserService {
          return MeteoEvents.Rainfall;
       }
       return MeteoEvents.Other;
+   }
+
+   private static getDataFromMetDotHu(
+      code: number,
+      type: HungarianAlertTypes
+   ): Observable<IMetHuEntityWithData> {
+      const linkType = type === HungarianAlertTypes.County ? 'wbhx' : 'wahx';
+      return getHttpRequestAsync(
+         // tslint:disable-next-line: max-line-length
+         `http://met.hu/idojaras/veszelyjelzes/hover.php?id=${linkType}&kod=${code}&_=${new Date().getTime()}`,
+         15000
+      ).pipe(
+         map((rawData) => {
+            return { type, code, data: rawData };
+         }),
+         catchError(() => observableOf(null))
+      );
+   }
+
+   private static async notify(locations: Array<IDeviceLocationRecent>, alertArea: IAlertArea) {
+      if (locations.length !== 0) {
+         const fcmBase: IFcmBase = {
+            registration_ids: locations.map((x) => x.did),
+            time_to_live: 1800,
+            data: {
+               message: {
+                  mtype: 'ALERT',
+                  data: alertArea,
+               },
+            },
+         };
+         await customHttpRequestAsync(fcmUtils.firebaseSettings, fcmBase).toPromise();
+      }
+   }
+
+   // #endregion Private Static Methods (3)
+
+   // #region Private Methods (5)
+
+   private domToAlertArea(dom: any, areaType: HungarianAlertTypes): IAlertArea {
+      try {
+         const data: IAlertArea = {
+            name: dom[1].children[1].children[0].children[0].data,
+            type: areaType,
+            alerts: [],
+         };
+
+         dom[1].children.forEach((tablechild) => {
+            if (tablechild.type === 'tag') {
+               const alert: IMeteoAlert = { level: null, type: null };
+               let has = false;
+               tablechild.children.forEach((td) => {
+                  if (td.type === 'tag' && td.name === 'td') {
+                     if (td.attribs.class === 'row1' || td.attribs.class === 'row0') {
+                        if (td.children !== undefined) {
+                           td.children.forEach((alertElem) => {
+                              if (alertElem.type === 'tag' && alertElem.name === 'img') {
+                                 if (alertElem.attribs.src === '/images/warningb/w1.gif') {
+                                    alert.level = 1;
+                                    has = true;
+                                 } else if (alertElem.attribs.src === '/images/warningb/w2.gif') {
+                                    alert.level = 2;
+                                    has = true;
+                                 } else if (alertElem.attribs.src === '/images/warningb/w3.gif') {
+                                    alert.level = 3;
+                                    has = true;
+                                 }
+                              }
+                              if (alertElem.type === 'text') {
+                                 alert.type = HungarianOmszAlertsParserService.getAlertCode(alertElem.data);
+                                 has = true;
+                              }
+                           });
+                        }
+                     }
+                  }
+               });
+               if (has) {
+                  data.alerts.push(alert);
+               }
+            }
+         });
+
+         return data;
+      } catch (exc) {
+         this.logger.sendErrorMessage(0, 0, 'met.hu parser', 'Error during parse: ' + exc.toString(), false);
+         return null;
+      }
+   }
+
+   private log(message: string, bgColor: number = 227, fgColor: number = 16, canBeHidden = false) {
+      this.logger.sendErrorMessage(bgColor, fgColor, 'met.hu parser', message, canBeHidden);
+   }
+
+   private async onTimerTick() {
+      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading county data`, false);
+
+      const countyQuery = from(this.metHuData.counties).pipe(
+         mergeMap((county) =>
+            HungarianOmszAlertsParserService.getDataFromMetDotHu(county, HungarianAlertTypes.County)
+         )
+      );
+      const countyResponsesAll = await merge(countyQuery, 4).pipe(toArray()).toPromise();
+      this.log(`All county data downloaded: ${countyResponsesAll.length}`);
+
+      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading regional unit data`, false);
+
+      const regionalUnitQuery = from(this.metHuData.regionalUnits).pipe(
+         mergeMap((regionalUnit) =>
+            HungarianOmszAlertsParserService.getDataFromMetDotHu(
+               regionalUnit,
+               HungarianAlertTypes.RegionalUnit
+            )
+         )
+      );
+      const regionalUnitResponsesAll = await merge(regionalUnitQuery, 4).pipe(toArray()).toPromise();
+      this.log(`All regional unit downloaded: ${regionalUnitResponsesAll.length}`);
+      const countyResponses = countyResponsesAll.filter((x) => x != null);
+      const regionalUnitResponses = regionalUnitResponsesAll.filter((x) => x != null);
+      countyResponses.map((x) => this.parseData(this.countyHtmlParser, x));
+      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Counties parsed.`, false);
+      regionalUnitResponses.map((x) => this.parseData(this.regionalUnitHtmlParser, x));
+      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Regional units parsed.`, false);
+   }
+
+   private parseData(parser: any, entity: IMetHuEntityWithData) {
+      parser.parseComplete(entity.data, (result) => {});
    }
 
    private async save(alertArea: IAlertArea) {
@@ -193,93 +299,7 @@ class HungarianOmszAlertsParserService {
       }
    }
 
-   private domToAlertArea(dom: any, areaType: HungarianAlertTypes): IAlertArea {
-      try {
-         const data: IAlertArea = {
-            name: dom[1].children[1].children[0].children[0].data,
-            type: areaType,
-            alerts: [],
-         };
-
-         dom[1].children.forEach((tablechild) => {
-            if (tablechild.type === 'tag') {
-               const alert: IMeteoAlert = { level: null, type: null };
-               let has = false;
-               tablechild.children.forEach((td) => {
-                  if (td.type === 'tag' && td.name === 'td') {
-                     if (td.attribs.class === 'row1' || td.attribs.class === 'row0') {
-                        if (td.children !== undefined) {
-                           td.children.forEach((alertElem) => {
-                              if (alertElem.type === 'tag' && alertElem.name === 'img') {
-                                 if (alertElem.attribs.src === '/images/warningb/w1.gif') {
-                                    alert.level = 1;
-                                    has = true;
-                                 } else if (alertElem.attribs.src === '/images/warningb/w2.gif') {
-                                    alert.level = 2;
-                                    has = true;
-                                 } else if (alertElem.attribs.src === '/images/warningb/w3.gif') {
-                                    alert.level = 3;
-                                    has = true;
-                                 }
-                              }
-                              if (alertElem.type === 'text') {
-                                 alert.type = HungarianOmszAlertsParserService.getAlertCode(alertElem.data);
-                                 has = true;
-                              }
-                           });
-                        }
-                     }
-                  }
-               });
-               if (has) {
-                  data.alerts.push(alert);
-               }
-            }
-         });
-
-         return data;
-      } catch (exc) {
-         this.logger.sendErrorMessage(0, 0, 'met.hu parser', 'Error during parse: ' + exc.toString(), false);
-         return null;
-      }
-   }
-
-   private parseData(parser: any, entity: IMetHuEntityWithData) {
-      parser.parseComplete(entity.data, (result) => {});
-   }
-
-   public invoke(): void {}
-
-   private async onTimerTick() {
-      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading county data`, false);
-
-      const countyQuery = from(this.metHuData.counties).pipe(
-         mergeMap((county) =>
-            HungarianOmszAlertsParserService.getDataFromMetDotHu(county, HungarianAlertTypes.County)
-         )
-      );
-      const countyResponsesAll = await merge(countyQuery, 4).pipe(toArray()).toPromise();
-      this.log(`All county data downloaded: ${countyResponsesAll.length}`);
-
-      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading regional unit data`, false);
-
-      const regionalUnitQuery = from(this.metHuData.regionalUnits).pipe(
-         mergeMap((regionalUnit) =>
-            HungarianOmszAlertsParserService.getDataFromMetDotHu(
-               regionalUnit,
-               HungarianAlertTypes.RegionalUnit
-            )
-         )
-      );
-      const regionalUnitResponsesAll = await merge(regionalUnitQuery, 4).pipe(toArray()).toPromise();
-      this.log(`All regional unit downloaded: ${regionalUnitResponsesAll.length}`);
-      const countyResponses = countyResponsesAll.filter((x) => x != null);
-      const regionalUnitResponses = regionalUnitResponsesAll.filter((x) => x != null);
-      countyResponses.map((x) => this.parseData(this.countyHtmlParser, x));
-      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Counties parsed.`, false);
-      regionalUnitResponses.map((x) => this.parseData(this.regionalUnitHtmlParser, x));
-      this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Regional units parsed.`, false);
-   }
+   // #endregion Private Methods (5)
 }
 
 export const metHuParser: IMetHuParser = new HungarianOmszAlertsParserService(loggerInstance, 90);

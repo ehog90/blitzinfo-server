@@ -1,14 +1,16 @@
 /**
  * Created by ehog on 2016. 11. 14..
  */
-
 import { config } from '../config';
 import { IGeoAddress, ISettlementDocument } from '../contracts/entities';
 import { IReverseGeoCoderAsync } from '../contracts/service-interfaces';
 import * as mongo from '../database/mongoose-schemes';
 import * as crg from './country-based-reverse-geocoder';
 
+
 class MongoBasedReverseGeocoder implements IReverseGeoCoderAsync {
+   // #region Public Methods (1)
+
    public async getGeoInformation(latLonPair: number[]): Promise<IGeoAddress> {
       const locationData: IGeoAddress = {
          cc: 'xx',
@@ -72,6 +74,10 @@ class MongoBasedReverseGeocoder implements IReverseGeoCoderAsync {
       return Promise.resolve(locationData);
    }
 
+   // #endregion Public Methods (1)
+
+   // #region Private Methods (1)
+
    private processOtherTags(tags: string) {
       try {
          const tagObject = {};
@@ -88,5 +94,7 @@ class MongoBasedReverseGeocoder implements IReverseGeoCoderAsync {
          return {};
       }
    }
+
+   // #endregion Private Methods (1)
 }
 export const mongoReverseGeocoderAsync: IReverseGeoCoderAsync = new MongoBasedReverseGeocoder();

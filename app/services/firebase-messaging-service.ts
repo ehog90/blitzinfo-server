@@ -17,15 +17,32 @@ import { databaseSaverInstance } from './database-handler-service';
 import { loggerInstance } from './logger-service';
 
 class FirebaseService implements IFirebaseService {
+   // #region Properties (3)
+
+   private static DEVICE_TIMEOUT: number = 1000 * 60 * 60;
+   private static NOTIF_TIMEOUT: number = 1000 * 60 * 60;
+
+   private lastDataFromDatabase: Subject<IStroke>;
+
+   // #endregion Properties (3)
+
+   // #region Constructors (1)
+
    constructor(private logger: ILogger, databaseSaver: IDatabaseSaver) {
       this.lastDataFromDatabase = databaseSaver.lastSavedStroke;
       this.lastDataFromDatabase.subscribe((stroke) => this.strokeReceived(stroke));
    }
-   private static NOTIF_TIMEOUT: number = 1000 * 60 * 60;
-   private static DEVICE_TIMEOUT: number = 1000 * 60 * 60;
-   private lastDataFromDatabase: Subject<IStroke>;
 
-   /* ha a távolság nagyobb, mint 51, akkor az értéke 999 lesz, ha 20 és 50 között, 20, ha annál kisebb, 0.*/
+   // #endregion Constructors (1)
+
+   // #region Public Methods (1)
+
+   public invoke(): void {}
+
+   // #endregion Public Methods (1)
+
+   // #region Private Static Methods (4)
+
    private static getNotificationClass(distance: number): number {
       if (distance > 50) {
          return 999;
@@ -34,16 +51,6 @@ class FirebaseService implements IFirebaseService {
       }
       return 0;
    }
-
-   /*private static getTrimmedStroke(stroke: IStroke): IStroke {
-      return {
-         blitzortungId: stroke.blitzortungId,
-         latLon: stroke.latLon,
-         sunData: stroke.sunData,
-         time: stroke.time,
-         locationData: stroke.locationData,
-      };
-   }*/
 
    private static async updateDatabaseAndNotifyForCurrentLocations(
       device: IDeviceLocationRecent,
@@ -110,44 +117,9 @@ class FirebaseService implements IFirebaseService {
       );
    }
 
-   private async updateDatabaseAndNotifyForSavedLocations(
-      savedLocation: ISavedLocation,
-      strokeWithDistance: IStrokeWithSavedLocation
-   ) {
-      try {
-         await mongo.SavedLocationMongoModel.updateOne(
-            {
-               _id: savedLocation._id,
-            },
-            {
-               $set: {
-                  lastInAlertZone: strokeWithDistance.s.time,
-                  lastAlert: strokeWithDistance,
-                  $push: { alerts: strokeWithDistance },
-               },
-            }
-         );
+   // #endregion Private Static Methods (4)
 
-         const devices = await mongo.LocationRecentMongoModel.find({
-            'userData.uid': savedLocation.uid,
-            timeLast: { $gt: new Date(new Date().getTime() - FirebaseService.DEVICE_TIMEOUT) },
-         });
-
-         devices.forEach(async (device) => {
-            const fcmMessage: IFcmStrokeSavedLocation = {
-               time_to_live: 300,
-               registration_ids: [device.did],
-               data: {
-                  message: {
-                     mtype: 'STROKE_SAVEDLOC',
-                     data: strokeWithDistance,
-                  },
-               },
-            };
-            await customHttpRequestAsync(firebaseSettings, fcmMessage).toPromise();
-         });
-      } catch (error) {}
-   }
+   // #region Private Methods (4)
 
    private async checkRecentLocations(stroke: IStroke) {
       const now = new Date();
@@ -272,12 +244,51 @@ class FirebaseService implements IFirebaseService {
       });
    }
 
-   public invoke(): void {}
-
    private async strokeReceived(stroke: IStroke) {
       await this.checkRecentLocations(stroke);
       await this.checkSavedLocations(stroke);
    }
+
+   private async updateDatabaseAndNotifyForSavedLocations(
+      savedLocation: ISavedLocation,
+      strokeWithDistance: IStrokeWithSavedLocation
+   ) {
+      try {
+         await mongo.SavedLocationMongoModel.updateOne(
+            {
+               _id: savedLocation._id,
+            },
+            {
+               $set: {
+                  lastInAlertZone: strokeWithDistance.s.time,
+                  lastAlert: strokeWithDistance,
+                  $push: { alerts: strokeWithDistance },
+               },
+            }
+         );
+
+         const devices = await mongo.LocationRecentMongoModel.find({
+            'userData.uid': savedLocation.uid,
+            timeLast: { $gt: new Date(new Date().getTime() - FirebaseService.DEVICE_TIMEOUT) },
+         });
+
+         devices.forEach(async (device) => {
+            const fcmMessage: IFcmStrokeSavedLocation = {
+               time_to_live: 300,
+               registration_ids: [device.did],
+               data: {
+                  message: {
+                     mtype: 'STROKE_SAVEDLOC',
+                     data: strokeWithDistance,
+                  },
+               },
+            };
+            await customHttpRequestAsync(firebaseSettings, fcmMessage).toPromise();
+         });
+      } catch (error) {}
+   }
+
+   // #endregion Private Methods (4)
 }
 
 export const firebaseMessagingService: IFirebaseService = new FirebaseService(

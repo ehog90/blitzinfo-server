@@ -49,7 +49,7 @@ class FirebaseService implements IFirebaseService {
       device: IDeviceLocationRecent,
       strokeWithDistance: IStrokeWithDistance
    ) {
-      await mongo.LocationRecentMongoModel.update(
+      await mongo.LocationRecentMongoModel.updateOne(
          {
             did: device.did,
          },
@@ -60,7 +60,7 @@ class FirebaseService implements IFirebaseService {
             },
          }
       );
-      await mongo.LocationLogMongoModel.update(
+      await mongo.LocationLogMongoModel.updateOne(
          { _id: device.lastLogId },
          { $push: { alerts: strokeWithDistance } }
       );
@@ -82,7 +82,7 @@ class FirebaseService implements IFirebaseService {
       device: IDeviceLocationRecent,
       strokeWithDistance: IStrokeWithDistance
    ) {
-      await mongo.LocationRecentMongoModel.update(
+      await mongo.LocationRecentMongoModel.updateOne(
          {
             did: device.did,
          },
@@ -98,7 +98,7 @@ class FirebaseService implements IFirebaseService {
       savedLocation: ISavedLocation,
       strokeWithDistance: IStrokeWithSavedLocation
    ) {
-      await mongo.SavedLocationMongoModel.update(
+      await mongo.SavedLocationMongoModel.updateOne(
          {
             _id: savedLocation._id,
          },
@@ -106,7 +106,7 @@ class FirebaseService implements IFirebaseService {
             $set: {
                lastInAlertZone: strokeWithDistance.s.time,
             },
-         },
+         }
       );
    }
 
@@ -115,7 +115,7 @@ class FirebaseService implements IFirebaseService {
       strokeWithDistance: IStrokeWithSavedLocation
    ) {
       try {
-         await mongo.SavedLocationMongoModel.update(
+         await mongo.SavedLocationMongoModel.updateOne(
             {
                _id: savedLocation._id,
             },

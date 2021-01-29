@@ -168,7 +168,7 @@ export class SocketIoServer implements ISocketIoServer {
       );
       request.connectionType.push(SocketIoConnectionTypes.Stat);
       const year = new Date().getUTCFullYear();
-      const statData = await forkJoin(
+      const statData = await forkJoin([
          mongo.AllStatMongoModel.findOne({
             isYear: false,
             period: 'all',
@@ -199,8 +199,8 @@ export class SocketIoServer implements ISocketIoServer {
             .limit(SocketIoServer.STAT_HOURS * 6)
             .lean()
             .toObservable()
-            .pipe(map((x) => getFlatTenMinStatistics(x)))
-      ).toPromise();
+            .pipe(map((x) => getFlatTenMinStatistics(x))),
+      ]).toPromise();
       request.emit(SocketIoRooms.StatsInit, statData);
    }
 
@@ -224,7 +224,7 @@ export class SocketIoServer implements ISocketIoServer {
          return false;
       }
       initializationMessage.dirs.forEach((x) => {
-         return !isNaN(x)
+         return !isNaN(x);
       });
       return true;
    }

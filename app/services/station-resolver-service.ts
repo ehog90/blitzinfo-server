@@ -1,6 +1,6 @@
 import { toPairs } from 'lodash';
 import { merge, Observable, of, TimeInterval, timer } from 'rxjs';
-import { catchError, filter, flatMap, map, timeInterval } from 'rxjs/operators';
+import { catchError, filter, map, mergeMap, timeInterval } from 'rxjs/operators';
 
 import { IStationResolver } from '../contracts/service-interfaces';
 import { StationsMongoModel } from '../database';
@@ -50,7 +50,7 @@ class StationResolver implements IStationResolver {
          const stationGeoInformation = await remoteMongoReverseGeocoderAsync.getGeoInformation(
             stationData.latLon
          );
-         await StationsMongoModel.update(
+         await StationsMongoModel.updateOne(
             { sId: stationData.sId },
             {
                $set: {
@@ -69,7 +69,7 @@ class StationResolver implements IStationResolver {
    private stationUpdateRequested() {
       merge(this.jsonUrls, 1)
          .pipe(
-            flatMap((url) =>
+            mergeMap((url) =>
                json
                   .getHttpRequestAsync<ILightningmapsStationData>(`${url}&${Math.random() % 420}`, 1500)
                   .pipe(

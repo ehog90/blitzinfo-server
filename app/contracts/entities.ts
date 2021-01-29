@@ -537,10 +537,7 @@ export interface StrokeSocket extends Socket {
    userInfo: IInitializationMessage | null;
    allStatInfo: ISocketIoAllStatRequest | null;
    connectionType: SocketIoConnectionTypes[] | null;
-
-   // This is just a temporary workaround Just overriding these because of the red lines in the IDE.
-   on(event: string | symbol | SocketIoRooms, listener: Function): this;
-
+   on(event: string | symbol | SocketIoRooms, listener: (socket: Socket) => void): this;
    emit(event: string | symbol | SocketIoRooms, ...args: any[]): boolean;
 }
 

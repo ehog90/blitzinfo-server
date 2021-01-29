@@ -172,7 +172,7 @@ export class LocationUpdaterService implements ILocationUpdater {
                LocationUpdaterService.saveRecentToDatabase(updater, deviceData, logResult)
             );
          } else {
-            await mongo.LocationRecentMongoModel.update(
+            await mongo.LocationRecentMongoModel.updateOne(
                { did: { $eq: deviceData.se.did } },
                {
                   $inc: {
@@ -208,7 +208,7 @@ export class LocationUpdaterService implements ILocationUpdater {
          const saved = await LocationUpdaterService.saveNewLogToDatabase(updater, deviceData, locationData);
          return Promise.resolve({ geocodingResult: locationData, id: saved._id.toString() });
       } else if (geoUtils.getDistance(deviceData.latLon, existingData.latLon) < 0.1) {
-         await mongo.LocationLogMongoModel.update(
+         await mongo.LocationLogMongoModel.updateOne(
             { _id: existingData._id },
             {
                $inc: { num: 1, accsum: deviceData.acc },

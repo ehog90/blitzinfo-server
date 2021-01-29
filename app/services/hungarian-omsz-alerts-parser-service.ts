@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { from, Observable, of as observableOf, TimeInterval, timer } from 'rxjs';
-import { catchError, flatMap, map, merge, reduce, timeInterval } from 'rxjs/operators';
+import { catchError, map, merge, mergeMap, reduce, timeInterval } from 'rxjs/operators';
 
 import {
    HungarianAlertTypes,
@@ -177,7 +177,7 @@ class HungarianOmszAlertsParserService {
                alertArea.alerts.filter((x) => x.type === result.alertType && x.level === result.level)
                   .length === 0;
             if (hasInRecent) {
-               await mongo.AlertsMongoModel.update(
+               await mongo.AlertsMongoModel.updateOne(
                   {
                      _id: result._id,
                   },
@@ -250,7 +250,7 @@ class HungarianOmszAlertsParserService {
       this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading county data`, false);
       let countyResponses = (await from(this.metHuData.counties)
          .pipe(
-            flatMap((county) =>
+            mergeMap((county) =>
                HungarianOmszAlertsParserService.getDataFromMetDotHu(county, HungarianAlertTypes.County)
             ),
             merge(4),
@@ -260,13 +260,6 @@ class HungarianOmszAlertsParserService {
             }, [])
          )
          .toPromise()) as any[];
-      /* let countyResponses = await Observable.from(this.metHuData.counties)
-        .flatMap(county => HungarianOmszAlertsParserService.getDataFromMetDotHu(county, HungarianAlertTypes.County))
-        .merge(4).reduce((acc, value) => {
-             acc.push(value);
-             return acc;
-         }, []).toPromise();*/
-
       this.logger.sendNormalMessage(
          227,
          16,
@@ -278,7 +271,7 @@ class HungarianOmszAlertsParserService {
 
       let ruResponses = (await from(this.metHuData.regionalUnits)
          .pipe(
-            flatMap((ru) =>
+            mergeMap((ru) =>
                HungarianOmszAlertsParserService.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit)
             ),
             merge(4),
@@ -288,15 +281,6 @@ class HungarianOmszAlertsParserService {
             }, [])
          )
          .toPromise()) as any[];
-
-      /* let ruResponses = await Observable.from(this.metHuData.regionalUnits).flatMap(ru =>
-        HungarianOmszAlertsParserService.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit))
-        .merge(4).reduce((acc, value) => {
-             acc.push(value);
-             return acc;
-         }, []).toPromise();
-         this.logger.sendNormalMessage(227, 16, "met.hu parser", `All regional unit data downloaded: ${ruResponses.length}`, false);*/
-
       countyResponses = countyResponses.filter((x) => x != null);
       ruResponses = ruResponses.filter((x) => x != null);
       countyResponses.map((x) => this.parseData(this.countyHtmlParser, x));

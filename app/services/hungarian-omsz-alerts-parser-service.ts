@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
-import { from, Observable, of as observableOf, TimeInterval, timer } from 'rxjs';
-import { catchError, map, merge, mergeMap, reduce, timeInterval } from 'rxjs/operators';
+import { from, merge, Observable, of as observableOf, TimeInterval, timer } from 'rxjs';
+import { catchError, map, mergeMap, timeInterval, toArray } from 'rxjs/operators';
 
 import {
    HungarianAlertTypes,
@@ -64,6 +64,10 @@ class HungarianOmszAlertsParserService {
    private metHuData: IMetHuData;
    private countyHtmlParser: any;
    private regionalUnitHtmlParser: any;
+
+   private log(message: string, bgColor: number = 227, fgColor: number = 16, canBeHidden = false) {
+      this.logger.sendErrorMessage(bgColor, fgColor, 'met.hu parser', message, canBeHidden);
+   }
 
    private static async notify(locations: Array<IDeviceLocationRecent>, alertArea: IAlertArea) {
       if (locations.length !== 0) {
@@ -248,44 +252,32 @@ class HungarianOmszAlertsParserService {
 
    private async onTimerTick() {
       this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading county data`, false);
-      let countyResponses = (await from(this.metHuData.counties)
-         .pipe(
-            mergeMap((county) =>
-               HungarianOmszAlertsParserService.getDataFromMetDotHu(county, HungarianAlertTypes.County)
-            ),
-            merge(4),
-            reduce((acc, value) => {
-               acc.push(value);
-               return acc;
-            }, [])
+
+      const countyQuery = from(this.metHuData.counties).pipe(
+         mergeMap((county) =>
+            HungarianOmszAlertsParserService.getDataFromMetDotHu(county, HungarianAlertTypes.County)
          )
-         .toPromise()) as any[];
-      this.logger.sendNormalMessage(
-         227,
-         16,
-         'met.hu parser',
-         `All county data downloaded: ${countyResponses.length}`,
-         false
       );
+      const countyResponsesAll = await merge(countyQuery, 4).pipe(toArray()).toPromise();
+      this.log(`All county data downloaded: ${countyResponsesAll.length}`);
+
       this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Downloading regional unit data`, false);
 
-      let ruResponses = (await from(this.metHuData.regionalUnits)
-         .pipe(
-            mergeMap((ru) =>
-               HungarianOmszAlertsParserService.getDataFromMetDotHu(ru, HungarianAlertTypes.RegionalUnit)
-            ),
-            merge(4),
-            reduce((acc, value) => {
-               acc.push(value);
-               return acc;
-            }, [])
+      const regionalUnitQuery = from(this.metHuData.regionalUnits).pipe(
+         mergeMap((regionalUnit) =>
+            HungarianOmszAlertsParserService.getDataFromMetDotHu(
+               regionalUnit,
+               HungarianAlertTypes.RegionalUnit
+            )
          )
-         .toPromise()) as any[];
-      countyResponses = countyResponses.filter((x) => x != null);
-      ruResponses = ruResponses.filter((x) => x != null);
+      );
+      const regionalUnitResponsesAll = await merge(regionalUnitQuery, 4).pipe(toArray()).toPromise();
+      this.log(`All regional unit downloaded: ${regionalUnitResponsesAll.length}`);
+      const countyResponses = countyResponsesAll.filter((x) => x != null);
+      const regionalUnitResponses = regionalUnitResponsesAll.filter((x) => x != null);
       countyResponses.map((x) => this.parseData(this.countyHtmlParser, x));
       this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Counties parsed.`, false);
-      ruResponses.map((x) => this.parseData(this.regionalUnitHtmlParser, x));
+      regionalUnitResponses.map((x) => this.parseData(this.regionalUnitHtmlParser, x));
       this.logger.sendNormalMessage(227, 16, 'met.hu parser', `Regional units parsed.`, false);
    }
 }

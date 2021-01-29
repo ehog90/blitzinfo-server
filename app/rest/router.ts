@@ -2,15 +2,25 @@
  * Created by ehog on 2017. 07. 16..
  */
 import * as express from 'express';
+
 import { authTest } from './authentication-middleware';
 import { flagImage } from './flags';
 import { locationLogsForUser } from './location-logs';
 import { errors } from './logs';
 import { nearbyStrokes } from './nearby-strokes';
 import { periodicUpdate } from './periodic-update';
-import { getLocationsForUser, newLocationInstance, removeLocationInstance } from './saved-locations';
-import { getStationsAsync, stationsByCountry, stationCount } from './stations';
-import { currentUTCYearStats, lastMinutesStatistics, overallStats, tenminStats } from './stats';
+import {
+  getLocationsForUser,
+  newLocationInstance,
+  removeLocationInstance,
+} from './saved-locations';
+import { getStationsAsync, stationCount, stationsByCountry } from './stations';
+import {
+  currentUTCYearStats,
+  lastMinutesStatistics,
+  overallStats,
+  tenminStats,
+} from './stats';
 import { login, register } from './user-handling';
 import { welcome } from './welcome';
 
@@ -35,4 +45,7 @@ defaultRouter.post('/auth/user-location-logs', locationLogsForUser);
 defaultRouter.post('/auth/periodic-update', periodicUpdate);
 defaultRouter.get('/auth/saved-locations', getLocationsForUser);
 defaultRouter.post('/auth/saved-locations', newLocationInstance);
-defaultRouter.delete('/auth/saved-locations/:locationId', removeLocationInstance);
+defaultRouter.delete(
+  '/auth/saved-locations/:locationId',
+  removeLocationInstance,
+);

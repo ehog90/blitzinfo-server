@@ -7,25 +7,25 @@ import { fromPromise } from 'rxjs/internal-compatibility';
 
 export {};
 declare module 'mongoose' {
-   // tslint:disable-next-line: class-name
-   interface mquery {
-      toObservable(): Observable<any>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  interface mquery {
+    toObservable(): Observable<any>;
 
-      toPromise(): Promise<any>;
-   }
+    toPromise(): Promise<any>;
+  }
 
-   interface DocumentQuery<T, DocType extends Document> {
-      toObservable(): Observable<T>;
+  interface DocumentQuery<T, DocType extends Document> {
+    toObservable(): Observable<T>;
 
-      toPromise(): Promise<T>;
-   }
+    toPromise(): Promise<T>;
+  }
 }
 mquery.prototype.toObservable = function () {
-   const query = this;
-   return fromPromise(query.exec());
+  const query = this;
+  return fromPromise(query.exec());
 };
 
 mquery.prototype.toPromise = function () {
-   const query = this;
-   return query.exec();
+  const query = this;
+  return query.exec();
 };

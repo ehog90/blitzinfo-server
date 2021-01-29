@@ -1,4 +1,4 @@
 export const localeDb: { [key: string]: string } = {
-   hun: 'hu',
-   eng: 'en',
+  hun: 'hu',
+  eng: 'en',
 };

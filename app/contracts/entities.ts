@@ -143,6 +143,12 @@ export interface ILightningMapsStroke {
   sta: any;
 }
 
+export interface ILightningMapsProcessResult {
+  dupes: number;
+  malformed: number;
+  strokes: ILightningMapsStroke[];
+}
+
 export interface ILightningMapsStrokeBulk {
   time: number;
   id: number;

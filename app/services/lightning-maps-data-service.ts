@@ -1,4 +1,4 @@
-import { uniqWith } from 'lodash';
+import { processLightningmapsMessage } from '../helpers/lightningmaps-message-helper';
 import {
   interval,
   Observable,
@@ -14,7 +14,6 @@ import { config, initObject } from '../config';
 import {
   IIdAndDate,
   ILightningMapsStroke,
-  ILightningMapsStrokeBulk,
   ISocketInitialization,
 } from '../contracts/entities';
 import {
@@ -80,25 +79,13 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
       }
     });
   }
+  isStrokeCorrect(stroke: ILightningMapsStroke): boolean {
+    throw new Error('Method not implemented.');
+  }
 
   // #endregion Constructors (1)
 
   // #region Public Methods (2)
-
-  public isStrokeCorrect(stroke: ILightningMapsStroke): boolean {
-    return (
-      stroke.lat !== undefined &&
-      stroke.lon !== undefined &&
-      stroke.id !== undefined &&
-      !isNaN(stroke.lat) &&
-      !isNaN(stroke.lon) &&
-      !isNaN(stroke.id) &&
-      stroke.lat <= 90 &&
-      stroke.lat >= -90 &&
-      stroke.lon <= 180 &&
-      stroke.lon >= -180
-    );
-  }
 
   public start(): void {
     this.logger.sendWarningMessage(
@@ -163,44 +150,41 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
       });
       connection.on('message', (messageRaw: IMessage) => {
         try {
-          const messageParsed: any = JSON.parse(messageRaw.utf8Data);
-          if (messageParsed.strokes != null) {
-            const messageBulk = messageParsed as ILightningMapsStrokeBulk;
-            const originalStrokes = messageBulk.strokes;
-            messageBulk.strokes = uniqWith(
-              messageBulk.strokes,
-              (a, b) => (a.lat === b.lat && a.lon === b.lon) || a.id === b.id,
+          const { strokes, dupes, malformed } = processLightningmapsMessage(
+            messageRaw,
+          );
+          if (dupes) {
+            this.logger.sendWarningMessage(
+              0,
+              0,
+              'LightningMaps Socket',
+              `Maybe duplicated strokes: ${dupes}`,
+              true,
             );
-            if (originalStrokes.length !== messageBulk.strokes.length) {
-              this.logger.sendWarningMessage(
-                0,
-                0,
-                'LightningMaps Socket',
-                `Maybe duplicated strokes: ${
-                  originalStrokes.length - messageBulk.strokes.length
-                }`,
-                true,
-              );
+          }
+
+          if (malformed) {
+            this.logger.sendWarningMessage(
+              0,
+              0,
+              'LightningMaps Socket',
+              `Malformed strokes: ${malformed}`,
+              true,
+            );
+          }
+
+          for (const stroke of strokes) {
+            if (this.isStrokeAlreadyProcessed(stroke)) {
+              this.duplicatedData.next(stroke);
+            } else {
+              this.processedStrokes.unshift({
+                id: stroke.id,
+                time: stroke.time,
+              });
+              this.lastReceived.next(stroke);
+              this.lastStroke = stroke;
+              this.lastTimeWhenReceived = new Date().getTime();
             }
-            messageBulk.strokes.forEach((x) => {
-              if (!this.isStrokeCorrect(x)) {
-                this.logger.sendErrorMessage(
-                  0,
-                  0,
-                  'LightningMaps Socket',
-                  `Malformed stroke: [ID=${x.id}, lat=${x.lat}, lon=${x.lon}]`,
-                  true,
-                );
-              } else if (this.isStrokeAlreadyProcessed(x)) {
-                this.duplicatedData.next(x);
-              } else {
-                this.processedStrokes.unshift({ id: x.id, time: x.time });
-                this.lastReceived.next(x);
-                this.lastStroke = x;
-                this.lastTimeWhenReceived = new Date().getTime();
-              }
-            });
-          } else {
           }
         } catch (exc) {
           this.logger.sendErrorMessage(

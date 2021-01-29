@@ -24,6 +24,7 @@ const strokeSchema = {
    sunData: SunData,
    blitzortungId: Number,
 };
+
 const locationSchema = {
    num: Number,
    updater: String,

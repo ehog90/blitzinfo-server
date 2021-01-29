@@ -1,5 +1,4 @@
 import { readFileSync } from 'fs';
-
 import { from, Observable, of as observableOf, TimeInterval, timer } from 'rxjs';
 import { catchError, flatMap, map, merge, reduce, timeInterval } from 'rxjs/operators';
 

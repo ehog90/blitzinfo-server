@@ -1,6 +1,8 @@
+import { IMinutelyStatDocument } from './../contracts/entities';
+
 const _: any = require('lodash');
 
-export function getFlatTenMinStatistics(result): any[] {
+export function getFlatTenMinStatistics(result: IMinutelyStatDocument[]): any[] {
    return result.map((elem) => {
       const countryStat = _(elem.data)
          .toPairs()
@@ -10,7 +12,7 @@ export function getFlatTenMinStatistics(result): any[] {
    });
 }
 
-export function getFlatAllStatistics(results: any): any[][] {
+export function getFlatAllStatistics(results: IMinutelyStatDocument[]): any[][] {
    const allCountryData = _(results)
       .flatMap((x) => x.data)
       .reduce((acc, curr) => {

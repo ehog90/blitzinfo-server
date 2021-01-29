@@ -1,13 +1,12 @@
 import * as http from 'http';
-import { forkJoin, Observable, Subject, TimeInterval, timer } from 'rxjs';
-import { map, timeInterval } from 'rxjs/operators';
+import { Observable, Subject, TimeInterval, timer } from 'rxjs';
+import { timeInterval } from 'rxjs/operators';
 import * as socketIo from 'socket.io';
 
 import { config } from '../config';
 import {
    HungarianAlertTypes,
    IAlertArea,
-   IAllStatDocument,
    IDeviceUpdateRequestBody,
    IGeoInformation,
    IHungarianRegionalInformation,
@@ -158,6 +157,26 @@ export class SocketIoServer implements ISocketIoServer {
       });
    }
 
+   private queryOverallStats(isYear = false, period: string = 'all'): Promise<any> {
+      return mongo.AllStatMongoModel.findOne({
+         isYear,
+         period,
+      }).then((result) => processStatResult(result.data));
+   }
+
+   private queryMinStats(interval: number): Promise<any[][]> {
+      return mongo.MinStatMongoModel.find({
+         timeStart: { $gt: new Date(Date.now() - interval) },
+      }).then((result) => getFlatAllStatistics(result));
+   }
+
+   private queryTenMinStats(): Promise<any[]> {
+      return mongo.TenminStatMongoModel.find({})
+         .sort({ timeStart: -1 })
+         .limit(SocketIoServer.STAT_HOURS * 6)
+         .then((result) => getFlatTenMinStatistics(result));
+   }
+
    private async onStatQueryRequested(request: StrokeSocket, message: any) {
       this.logger.sendNormalMessage(
          0,
@@ -168,39 +187,13 @@ export class SocketIoServer implements ISocketIoServer {
       );
       request.connectionType.push(SocketIoConnectionTypes.Stat);
       const year = new Date().getUTCFullYear();
-      const statData = await forkJoin([
-         mongo.AllStatMongoModel.findOne({
-            isYear: false,
-            period: 'all',
-         })
-            .toObservable()
-            .pipe(map((x: any) => processStatResult(x.data))),
-         mongo.AllStatMongoModel.findOne({
-            isYear: true,
-            period: year.toString(),
-         })
-            .lean()
-            .toObservable()
-            .pipe(map((x: IAllStatDocument) => processStatResult(x.data))),
-         mongo.MinStatMongoModel.find({
-            timeStart: { $gt: new Date(Date.now() - SocketIoServer.LAST_DAY) },
-         })
-            .lean()
-            .toObservable()
-            .pipe(map((x) => getFlatAllStatistics(x))),
-         mongo.MinStatMongoModel.find({
-            timeStart: { $gt: new Date(Date.now() - SocketIoServer.LAST_HOUR) },
-         })
-            .lean()
-            .toObservable()
-            .pipe(map((x) => getFlatAllStatistics(x))),
-         mongo.TenminStatMongoModel.find({})
-            .sort({ timeStart: -1 })
-            .limit(SocketIoServer.STAT_HOURS * 6)
-            .lean()
-            .toObservable()
-            .pipe(map((x) => getFlatTenMinStatistics(x))),
-      ]).toPromise();
+      const statData = Promise.all([
+         this.queryOverallStats(false, 'all'),
+         this.queryOverallStats(true, year.toString()),
+         this.queryMinStats(SocketIoServer.LAST_DAY),
+         this.queryMinStats(SocketIoServer.LAST_HOUR),
+         this.queryTenMinStats(),
+      ]);
       request.emit(SocketIoRooms.StatsInit, statData);
    }
 

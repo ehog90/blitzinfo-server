@@ -5,7 +5,8 @@ import { ICountryReverseGeoCoderAsync } from '../contracts/service-interfaces';
 
 const wherewolf = require('wherewolf');
 
-class CountryBasedReverseGeocoder implements ICountryReverseGeoCoderAsync {
+export class CountryBasedReverseGeocoder
+  implements ICountryReverseGeoCoderAsync {
   // #region Properties (1)
 
   private whereWolfInstance: any;

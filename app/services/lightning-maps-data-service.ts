@@ -8,7 +8,7 @@ import {
   timer,
 } from 'rxjs';
 import { buffer, timeInterval } from 'rxjs/operators';
-import * as websocket from 'websocket';
+import { client, connection, IMessage } from 'websocket';
 
 import { config, initObject } from '../config';
 import {
@@ -23,11 +23,11 @@ import {
 } from '../contracts/service-interfaces';
 import { loggerInstance } from './logger-service';
 
-class LightningMapsDataService implements ILightningMapsWebSocket {
+export class LightningMapsDataService implements ILightningMapsWebSocket {
   // #region Properties (15)
 
-  private blitzortungConnection: websocket.connection;
-  private blitzortungWebSocket: websocket.client;
+  private blitzortungConnection: connection;
+  private blitzortungWebSocket: client;
   private duplicatedData: Subject<ILightningMapsStroke>;
   private processedStrokes: Array<IIdAndDate>;
   private reconnectSubscription: Subscription;
@@ -62,8 +62,6 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
       this.timeoutInSec * 1000,
     ).pipe(timeInterval());
     this.reconnectTimer = timer(46800000, 46800000).pipe(timeInterval());
-    this.timerSubscription?.unsubscribe();
-    this.reconnectSubscription?.unsubscribe();
     this.timerSubscription = this.timeoutCheckerTimer.subscribe((x) =>
       this.timeoutTimerSubscription(),
     );
@@ -119,6 +117,8 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
   // #region Private Methods (4)
 
   private initializeWebSocket(): void {
+    this.timerSubscription?.unsubscribe();
+    this.reconnectSubscription?.unsubscribe();
     if (this.blitzortungConnection) {
       try {
         this.blitzortungConnection.close();
@@ -140,96 +140,93 @@ class LightningMapsDataService implements ILightningMapsWebSocket {
       }
     }
     this.processedStrokes = [];
-    this.blitzortungWebSocket = new websocket.client();
-    this.blitzortungWebSocket.on(
-      'connect',
-      (connection: websocket.connection) => {
-        this.blitzortungConnection = connection;
-        connection.on('error', (error: Error) => {
-          this.logger.sendErrorMessage(
-            0,
-            0,
-            'LightningMaps Socket',
-            `Error on connection: ${error}`,
-            false,
-          );
-        });
-        connection.on('close', (reason: number) => {
-          this.logger.sendErrorMessage(
-            0,
-            0,
-            'LightningMaps Socket',
-            `Client closed: ${reason}`,
-            false,
-          );
-        });
-        connection.on('message', (messageRaw: websocket.IMessage) => {
-          try {
-            const messageParsed: any = JSON.parse(messageRaw.utf8Data);
-            if (messageParsed.strokes != null) {
-              const messageBulk = messageParsed as ILightningMapsStrokeBulk;
-              const originalStrokes = messageBulk.strokes;
-              messageBulk.strokes = uniqWith(
-                messageBulk.strokes,
-                (a, b) => (a.lat === b.lat && a.lon === b.lon) || a.id === b.id,
+    this.blitzortungWebSocket = new client();
+    this.blitzortungWebSocket.on('connect', (connection: connection) => {
+      this.blitzortungConnection = connection;
+      connection.on('error', (error: Error) => {
+        this.logger.sendErrorMessage(
+          0,
+          0,
+          'LightningMaps Socket',
+          `Error on connection: ${error}`,
+          false,
+        );
+      });
+      connection.on('close', (reason: number) => {
+        this.logger.sendErrorMessage(
+          0,
+          0,
+          'LightningMaps Socket',
+          `Client closed: ${reason}`,
+          false,
+        );
+      });
+      connection.on('message', (messageRaw: IMessage) => {
+        try {
+          const messageParsed: any = JSON.parse(messageRaw.utf8Data);
+          if (messageParsed.strokes != null) {
+            const messageBulk = messageParsed as ILightningMapsStrokeBulk;
+            const originalStrokes = messageBulk.strokes;
+            messageBulk.strokes = uniqWith(
+              messageBulk.strokes,
+              (a, b) => (a.lat === b.lat && a.lon === b.lon) || a.id === b.id,
+            );
+            if (originalStrokes.length !== messageBulk.strokes.length) {
+              this.logger.sendWarningMessage(
+                0,
+                0,
+                'LightningMaps Socket',
+                `Maybe duplicated strokes: ${
+                  originalStrokes.length - messageBulk.strokes.length
+                }`,
+                true,
               );
-              if (originalStrokes.length !== messageBulk.strokes.length) {
-                this.logger.sendWarningMessage(
+            }
+            messageBulk.strokes.forEach((x) => {
+              if (!this.isStrokeCorrect(x)) {
+                this.logger.sendErrorMessage(
                   0,
                   0,
                   'LightningMaps Socket',
-                  `Maybe duplicated strokes: ${
-                    originalStrokes.length - messageBulk.strokes.length
-                  }`,
+                  `Malformed stroke: [ID=${x.id}, lat=${x.lat}, lon=${x.lon}]`,
                   true,
                 );
+              } else if (this.isStrokeAlreadyProcessed(x)) {
+                this.duplicatedData.next(x);
+              } else {
+                this.processedStrokes.unshift({ id: x.id, time: x.time });
+                this.lastReceived.next(x);
+                this.lastStroke = x;
+                this.lastTimeWhenReceived = new Date().getTime();
               }
-              messageBulk.strokes.forEach((x) => {
-                if (!this.isStrokeCorrect(x)) {
-                  this.logger.sendErrorMessage(
-                    0,
-                    0,
-                    'LightningMaps Socket',
-                    `Malformed stroke: [ID=${x.id}, lat=${x.lat}, lon=${x.lon}]`,
-                    true,
-                  );
-                } else if (this.isStrokeAlreadyProcessed(x)) {
-                  this.duplicatedData.next(x);
-                } else {
-                  this.processedStrokes.unshift({ id: x.id, time: x.time });
-                  this.lastReceived.next(x);
-                  this.lastStroke = x;
-                  this.lastTimeWhenReceived = new Date().getTime();
-                }
-              });
-            } else {
-            }
-          } catch (exc) {
-            this.logger.sendErrorMessage(
-              0,
-              0,
-              'LightningMaps Socket',
-              `Message error: ${exc}`,
-              true,
-            );
+            });
+          } else {
           }
-        });
-        try {
-          this.blitzortungConnection.sendUTF(
-            JSON.stringify(this.initializationObject),
-          );
-          this.strokeEventChannel.next(0);
         } catch (exc) {
           this.logger.sendErrorMessage(
             0,
             0,
             'LightningMaps Socket',
-            `Initialization message error: ${exc}`,
-            false,
+            `Message error: ${exc}`,
+            true,
           );
         }
-      },
-    );
+      });
+      try {
+        this.blitzortungConnection.sendUTF(
+          JSON.stringify(this.initializationObject),
+        );
+        this.strokeEventChannel.next(0);
+      } catch (exc) {
+        this.logger.sendErrorMessage(
+          0,
+          0,
+          'LightningMaps Socket',
+          `Initialization message error: ${exc}`,
+          false,
+        );
+      }
+    });
   }
 
   private isStrokeAlreadyProcessed(stroke: ILightningMapsStroke): boolean {

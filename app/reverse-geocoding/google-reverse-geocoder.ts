@@ -6,7 +6,7 @@ import { IReverseGeoCoderAsync } from '../contracts/service-interfaces';
 import { getHttpRequestAsync } from '../helpers';
 import { googleMapsApiKey } from '../sensitive-data/api-key.sensitive';
 
-class GoogleReverseGeocoder implements IReverseGeoCoderAsync {
+export class GoogleReverseGeocoder implements IReverseGeoCoderAsync {
   // #region Public Methods (1)
 
   public async getGeoInformation(latLonPair: number[]): Promise<IGeoAddress> {
@@ -77,7 +77,7 @@ class GoogleReverseGeocoder implements IReverseGeoCoderAsync {
         return Promise.resolve(locationData);
       }
     } catch (error) {
-      return Promise.reject(error);
+      return Promise.reject(new Error(error.errorCode));
     }
   }
 

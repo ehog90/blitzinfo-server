@@ -21,7 +21,7 @@ import {
 import * as mongo from '../database/mongoose-schemes';
 import * as geoUtils from '../helpers/geospatial-helper';
 import { huRegReverseGeocoder } from '../reverse-geocoding';
-import * as grg from '../reverse-geocoding/google-reverse-geocoder.';
+import * as grg from '../reverse-geocoding/google-reverse-geocoder';
 import { loggerInstance } from './logger-service';
 
 export class LocationUpdaterService implements ILocationUpdater {

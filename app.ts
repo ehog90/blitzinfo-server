@@ -45,7 +45,7 @@ app.use(authenticationMiddleware);
 app.use(defaultRouter);
 
 const server = http.createServer(app);
-server.listen(config.restPort);
+server.listen(config?.ports?.rest);
 server.on('error', (error: IServerError) => {
   loggerInstance.sendErrorMessage(
     0,

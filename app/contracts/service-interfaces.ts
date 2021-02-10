@@ -56,12 +56,6 @@ export interface ICountryReverseGeoCoderAsync {
   getCountryData(latLonPair: number[]): Promise<ICountryReverseGeoCodeResult>;
 }
 
-export interface IHungarianRegionalReverseGeoCoder {
-  getRegionalInformation(
-    latLonPair: number[],
-  ): Promise<IHungarianRegionalInformation>;
-}
-
 export interface IReverseGeoCoderAsync {
   getGeoInformation(latLonPair: number[]): Promise<IGeoAddress>;
 }

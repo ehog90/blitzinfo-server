@@ -1,13 +1,6 @@
 import { config } from './../config_new';
 import { processLightningmapsMessage } from '../helpers/lightningmaps-message-helper';
-import {
-  interval,
-  Observable,
-  Subject,
-  Subscription,
-  TimeInterval,
-  timer,
-} from 'rxjs';
+import { interval, Observable, Subject, TimeInterval, timer } from 'rxjs';
 import { buffer, timeInterval } from 'rxjs/operators';
 import { client, connection, IMessage } from 'websocket';
 
@@ -24,16 +17,14 @@ import {
 import { loggerInstance } from './logger-service';
 
 export class LightningMapsDataService implements ILightningMapsWebSocket {
-  // #region Properties (15)
+  // #region Properties (13)
 
   private blitzortungConnection: connection;
   private blitzortungWebSocket: client;
   private duplicatedData: Subject<ILightningMapsStroke>;
   private processedStrokes: Array<IIdAndDate>;
-  private reconnectSubscription: Subscription;
   private reconnectTimer: Observable<TimeInterval<number>>;
   private timeoutCheckerTimer: Observable<TimeInterval<number>>;
-  private timerSubscription: Subscription;
   private url: string;
 
   public initializationObject: ISocketInitialization;
@@ -43,7 +34,7 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
   public strokeEventChannel: Subject<any>;
   public timeoutInSec: number;
 
-  // #endregion Properties (15)
+  // #endregion Properties (13)
 
   // #region Constructors (1)
 
@@ -62,12 +53,8 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
       this.timeoutInSec * 1000,
     ).pipe(timeInterval());
     this.reconnectTimer = timer(46800000, 46800000).pipe(timeInterval());
-    this.timerSubscription = this.timeoutCheckerTimer.subscribe((x) =>
-      this.timeoutTimerSubscription(),
-    );
-    this.reconnectSubscription = this.reconnectTimer.subscribe((x) =>
-      this.reconnectTimerSubscription(),
-    );
+    this.timeoutCheckerTimer.subscribe(() => this.scheduledReconnection());
+    this.reconnectTimer.subscribe(() => this.scheduledTimeout());
     this.duplicatedData.pipe(buffer(interval(1000))).subscribe((strokes) => {
       if (strokes.length > 0) {
         this.logger.sendErrorMessage(
@@ -80,13 +67,10 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
       }
     });
   }
-  isStrokeCorrect(stroke: ILightningMapsStroke): boolean {
-    throw new Error('Method not implemented.');
-  }
 
   // #endregion Constructors (1)
 
-  // #region Public Methods (2)
+  // #region Public Methods (1)
 
   public start(): void {
     this.logger.sendWarningMessage(
@@ -100,32 +84,30 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
     this.blitzortungWebSocket.connect(this.url);
   }
 
-  // #endregion Public Methods (2)
+  // #endregion Public Methods (1)
 
   // #region Private Methods (4)
 
   private initializeWebSocket(): void {
-    this.timerSubscription?.unsubscribe();
-    this.reconnectSubscription?.unsubscribe();
-    if (this.blitzortungConnection) {
-      try {
+    try {
+      if (this.blitzortungConnection) {
         this.blitzortungConnection.close();
-        this.logger.sendNormalMessage(
-          0,
-          0,
-          'LightningMaps Socket',
-          `Socket closure`,
-          false,
-        );
-      } catch (exc) {
-        this.logger.sendErrorMessage(
-          0,
-          0,
-          'LightningMaps Socket',
-          `Socket closure error: ${exc}`,
-          false,
-        );
       }
+      this.logger.sendNormalMessage(
+        0,
+        0,
+        'LightningMaps Socket',
+        `Socket closure`,
+        false,
+      );
+    } catch (exc) {
+      this.logger.sendErrorMessage(
+        0,
+        0,
+        'LightningMaps Socket',
+        `Socket closure error: ${exc}`,
+        false,
+      );
     }
     this.processedStrokes = [];
     this.blitzortungWebSocket = new client();
@@ -223,7 +205,7 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
     return false;
   }
 
-  private reconnectTimerSubscription() {
+  private scheduledReconnection() {
     this.initializeWebSocket();
     this.logger.sendNormalMessage(
       0,
@@ -234,7 +216,7 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
     );
   }
 
-  private timeoutTimerSubscription() {
+  private scheduledTimeout() {
     const timeSinceLast =
       (new Date().getTime() - this.lastTimeWhenReceived) / 1000;
     this.processedStrokes = this.processedStrokes.filter(

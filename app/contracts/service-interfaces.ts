@@ -42,7 +42,6 @@ export interface ILightningMapsWebSocket {
   strokeEventChannel: Subject<any>;
   lastTimeWhenReceived: number;
   lastReceived: Subject<ILightningMapsStroke>;
-  isStrokeCorrect(stroke: ILightningMapsStroke): boolean;
   start(): void;
 }
 

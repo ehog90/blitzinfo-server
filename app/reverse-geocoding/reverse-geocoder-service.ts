@@ -91,6 +91,4 @@ class ReverseGeocoderService implements IReverseGeoCoderService {
 export const reverseGeocoderService: IReverseGeoCoderService = new ReverseGeocoderService(
   combinedReverseGeocooder,
 );
-console.log(lightningMapsDataService);
-
 reverseGeocoderService.assignWebSocket(lightningMapsDataService);

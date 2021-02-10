@@ -1,3 +1,4 @@
+environment: PROD
 geocoding:
   host: mongo-revgeo
   port: 8889
@@ -9,3 +10,5 @@ lightningMaps:
 ports:
   rest: 5000
   socketIo: 5001
+dupeChecking:
+  timeout: 60

@@ -1,9 +1,9 @@
+import { config } from './../config_new';
 import * as http from 'http';
 import { Observable, Subject, TimeInterval, timer } from 'rxjs';
 import { timeInterval } from 'rxjs/operators';
 import * as socketIo from 'socket.io';
 
-import { config } from '../config';
 import {
   HungarianAlertTypes,
   IAlertArea,
@@ -497,5 +497,5 @@ export const socketIoService: ISocketIoServer = new SocketIoServer(
   databaseSaverInstance,
   locationUpdaterInstance,
   60,
-  config.socketIOPort,
+  Number(config?.ports?.socketIo),
 );

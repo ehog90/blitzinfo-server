@@ -65,13 +65,6 @@ server.on('error', (error: IServerError) => {
     process.exit(1);
   }
 });
-loggerInstance.sendNormalMessage(
-  40,
-  16,
-  'Configuration',
-  JSON.stringify(config),
-  false,
-);
 lightningMapsDataService.start();
 metHuParser.invoke();
 socketIoService.invoke();

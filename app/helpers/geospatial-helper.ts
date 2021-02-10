@@ -104,3 +104,14 @@ export function getDistanceAndBearing(
     distance: getDistance(start, end),
   };
 }
+
+export function validateCoordinates(coords: number[]): boolean {
+  const [lon, lat] = coords;
+  if (lon > 180 || lon < -180) {
+    return false;
+  }
+  if (lat > 90 || lat < -90) {
+    return false;
+  }
+  return true;
+}

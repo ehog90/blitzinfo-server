@@ -18,6 +18,7 @@ import {
 } from './../contracts/entities';
 import { lightningMapsDataService } from './lightning-maps-data-service';
 import { loggerInstance } from './logger-service';
+import { validateCoordinates } from '../helpers';
 
 class StationResolver implements IStationResolver {
   // #region Properties (3)
@@ -71,6 +72,16 @@ class StationResolver implements IStationResolver {
     );
 
     for (const stationData of stationsData) {
+      if (!validateCoordinates(stationData.latLon)) {
+        loggerInstance.sendWarningMessage(
+          0,
+          0,
+          `Stations`,
+          `Station metadata not updated: Invalid coords: ${stationData.latLon}`,
+          false,
+        );
+        continue;
+      }
       const stationGeoInformation = await combinedReverseGeocooder.getGeoInformation(
         stationData.latLon,
       );

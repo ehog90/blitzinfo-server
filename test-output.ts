@@ -12,13 +12,11 @@ ws.on('connect', (connection: websocket.connection) => {
   });
   connection.on('message', (messageRaw: websocket.IMessage) => {
     const data = JSON.parse(messageRaw.utf8Data);
-    // console.log(messageRaw);
     console.warn(
       'Strokes length: ' + (data.strokes ? data.strokes.length : 'None'),
     );
-    fs.appendFile('test-output-log.log', `${messageRaw.utf8Data}\n`, () => {
-      console.log(messageRaw.utf8Data);
-    });
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    fs.appendFile('test-output-log.log', `${messageRaw.utf8Data}\n`, () => {});
   });
   connection.sendUTF(JSON.stringify(initializationObject));
 });

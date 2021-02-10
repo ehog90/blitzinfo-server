@@ -1,3 +1,4 @@
+import { config } from './../config_new';
 import { processLightningmapsMessage } from '../helpers/lightningmaps-message-helper';
 import {
   interval,
@@ -10,7 +11,7 @@ import {
 import { buffer, timeInterval } from 'rxjs/operators';
 import { client, connection, IMessage } from 'websocket';
 
-import { config, initObject } from '../config';
+import { initObject } from '../config';
 import {
   IIdAndDate,
   ILightningMapsStroke,
@@ -272,5 +273,5 @@ export class LightningMapsDataService implements ILightningMapsWebSocket {
 export const lightningMapsDataService: ILightningMapsWebSocket = new LightningMapsDataService(
   loggerInstance,
   60,
-  config.lightningMapsUrl,
+  config?.lightningMaps?.baseUrl,
 );

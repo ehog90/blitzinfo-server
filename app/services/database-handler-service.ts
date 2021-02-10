@@ -1,8 +1,8 @@
+import { config } from './../config_new';
 import { FilterQuery } from 'mongoose';
 import { Observable, Subject, TimeInterval, timer } from 'rxjs';
 import { filter, take, timeInterval } from 'rxjs/operators';
 
-import { config } from '../config';
 import { IStroke } from '../contracts/entities';
 import {
   IDatabaseSaver,
@@ -52,7 +52,7 @@ class DatabaseHandlerService implements IDatabaseSaver {
   }
 
   private initializeTimer(): void {
-    const timerInterval = config.dbDupeCheckingTimeout * 1000;
+    const timerInterval = Number(config?.dupeChecking?.timeout) * 1000;
     this.dupeCheckerTimeoutTimer = timer(timerInterval, timerInterval).pipe(
       timeInterval(),
     );

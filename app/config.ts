@@ -1,16 +1,6 @@
 import { readFileSync } from 'fs';
 import * as commander from 'commander';
-import { Environment, IConfig } from './contracts/entities';
-
-export const config: IConfig = {
-  environment: Environment.Production,
-  mongoLink: 'mongodb://127.0.0.1/blitzinfo',
-  restPort: 5000,
-  socketIOPort: 5001,
-  lightningMapsUrl: 'wss://live.lightningmaps.org',
-  geoCodingDistanceThreshold: 15000,
-  dbDupeCheckingTimeout: 60,
-};
+import { Environment } from './contracts/entities';
 
 export const corsSettings = {
   origin: (origin, callback) => {
@@ -40,7 +30,7 @@ commander
   )
   .parse(process.argv);
 
-config.restPort = Number(commander.restPort);
+/*config.restPort = Number(commander.restPort);
 config.socketIOPort = Number(commander.livePort);
 switch (config.environment) {
   case 'DEV':
@@ -56,3 +46,4 @@ switch (config.environment) {
   default:
     break;
 }
+*/

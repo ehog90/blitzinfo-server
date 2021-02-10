@@ -1,3 +1,4 @@
+import { combinedReverseGeocooder } from './../reverse-geocoding/combined-reverse-geocoder';
 import { toPairs } from 'lodash';
 import { merge, Observable, of, TimeInterval, timer } from 'rxjs';
 import {
@@ -11,7 +12,6 @@ import {
 import { IStationResolver } from '../contracts/service-interfaces';
 import { StationsMongoModel } from '../database';
 import * as json from '../helpers/http-queries';
-import { remoteMongoReverseGeocoderAsync } from '../reverse-geocoding';
 import {
   ILightningmapsStationData,
   IStationsFromWeb,
@@ -71,7 +71,7 @@ class StationResolver implements IStationResolver {
     );
 
     for (const stationData of stationsData) {
-      const stationGeoInformation = await remoteMongoReverseGeocoderAsync.getGeoInformation(
+      const stationGeoInformation = await combinedReverseGeocooder.getGeoInformation(
         stationData.latLon,
       );
       await StationsMongoModel.updateOne(

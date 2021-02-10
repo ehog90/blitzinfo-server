@@ -1,15 +1,15 @@
+import { combinedReverseGeocooder } from './combined-reverse-geocoder';
+import {
+  ICombinedReverseGeocoderService,
+  IReverseGeoCoderService,
+} from './../contracts/service-interfaces';
 import { Subject } from 'rxjs';
 
 import { ILightningMapsStroke, IStroke } from '../contracts/entities';
-import {
-  ILightningMapsWebSocket,
-  IReverseGeoCoderAsync,
-  IReverseGeoCoderService,
-} from '../contracts/service-interfaces';
+import { ILightningMapsWebSocket } from '../contracts/service-interfaces';
 import * as geo from '../helpers/geospatial-helper';
 import { loggerInstance } from '../services';
 import { lightningMapsDataService } from '../services/lightning-maps-data-service';
-import { remoteMongoReverseGeocoderAsync } from './remote-mongo-reverse-geocoder';
 
 const sunCalc: any = require('../js-modules/suncalc');
 
@@ -25,7 +25,9 @@ class ReverseGeocoderService implements IReverseGeoCoderService {
 
   // #region Constructors (1)
 
-  constructor(private reverseGeocoder: IReverseGeoCoderAsync) {}
+  constructor(
+    private combinedReverseGeocoder: ICombinedReverseGeocoderService,
+  ) {}
 
   // #endregion Constructors (1)
 
@@ -68,7 +70,7 @@ class ReverseGeocoderService implements IReverseGeoCoderService {
       _id: null,
     } as IStroke;
     try {
-      geoCodedStroke.locationData = await this.reverseGeocoder.getGeoInformation(
+      geoCodedStroke.locationData = await this.combinedReverseGeocoder.getGeoInformation(
         [stroke.lon, stroke.lat],
       );
       this.lastGeocodedStroke.next(geoCodedStroke);
@@ -87,7 +89,7 @@ class ReverseGeocoderService implements IReverseGeoCoderService {
 }
 
 export const reverseGeocoderService: IReverseGeoCoderService = new ReverseGeocoderService(
-  remoteMongoReverseGeocoderAsync,
+  combinedReverseGeocooder,
 );
 console.log(lightningMapsDataService);
 

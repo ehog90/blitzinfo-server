@@ -1,3 +1,5 @@
+import { combinedReverseGeocooder } from './../reverse-geocoding/combined-reverse-geocoder';
+import { ICombinedReverseGeocoderService } from './../contracts/service-interfaces';
 import * as _ from 'lodash';
 import { interval, Subject } from 'rxjs';
 import { buffer } from 'rxjs/operators';
@@ -13,14 +15,12 @@ import {
   LocationUpdateSource,
 } from '../contracts/entities';
 import {
-  IHungarianRegionalReverseGeoCoder,
   ILocationUpdater,
   ILogger,
   IReverseGeoCoderAsync,
 } from '../contracts/service-interfaces';
 import * as mongo from '../database/mongoose-schemes';
 import * as geoUtils from '../helpers/geospatial-helper';
-import { huRegReverseGeocoder } from '../reverse-geocoding';
 import * as grg from '../reverse-geocoding/google-reverse-geocoder';
 import { loggerInstance } from './logger-service';
 
@@ -35,8 +35,8 @@ export class LocationUpdaterService implements ILocationUpdater {
 
   constructor(
     private logger: ILogger,
+    private combinedReverseGeocoder: ICombinedReverseGeocoderService,
     private reverseGeoCoder: IReverseGeoCoderAsync,
-    private hungarianRegionalReverseGeocoder: IHungarianRegionalReverseGeoCoder,
   ) {
     this.insertLastLocationSubject = new Subject<ILocationUpdateRequest>();
     this.insertLastLocationSubject
@@ -51,7 +51,7 @@ export class LocationUpdaterService implements ILocationUpdater {
   public getHungarianData(
     latLon: number[],
   ): Promise<IHungarianRegionalInformation> {
-    return this.hungarianRegionalReverseGeocoder.getRegionalInformation(latLon);
+    return this.combinedReverseGeocoder.getHungarianGeoInformation(latLon);
   }
 
   public async reverseGeocodeWithCountryAsync(
@@ -61,7 +61,7 @@ export class LocationUpdaterService implements ILocationUpdater {
       const currentLocation = await this.reverseGeoCoder.getGeoInformation(
         latLon,
       );
-      const hungarianData = await this.hungarianRegionalReverseGeocoder.getRegionalInformation(
+      const hungarianData = await this.combinedReverseGeocoder.getHungarianGeoInformation(
         latLon,
       );
       return Promise.resolve({
@@ -305,6 +305,6 @@ export class LocationUpdaterService implements ILocationUpdater {
 
 export const locationUpdaterInstance: ILocationUpdater = new LocationUpdaterService(
   loggerInstance,
+  combinedReverseGeocooder,
   grg.googleReverseGeoCoder,
-  huRegReverseGeocoder,
 );

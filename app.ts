@@ -7,7 +7,7 @@ import * as express from 'express';
 import * as method_override from 'method-override';
 import * as morgan from 'morgan';
 import * as bodyParser from 'body-parser';
-import { config, corsSettings } from './app/config';
+import { corsSettings } from './app/config';
 import { IServerError } from './app/contracts/entities';
 import {
   authenticationMiddleware,
@@ -23,16 +23,15 @@ import {
   stationResolverService,
 } from './app/services';
 import mongoose = require('mongoose');
+import { config, mongoLink } from './app/config_new';
 
 require('./app/database/mongoose-extensions');
-mongoose.connect(config.mongoLink, { poolSize: 3 }, (error) => {
+mongoose.connect(mongoLink, { poolSize: 3 }, (error) => {
   if (error) {
-    console.error(
-      `Failed to connect to the database ${config.mongoLink}: ${error}`,
-    );
+    console.error(`Failed to connect to the database ${mongoLink}: ${error}`);
     process.exit(1);
   } else {
-    console.error(`Mongoose connected to MongoDB:  ${config.mongoLink}}`);
+    console.info(`Mongoose connected to MongoDB:  ${mongoLink}}`);
   }
 });
 const app = express();

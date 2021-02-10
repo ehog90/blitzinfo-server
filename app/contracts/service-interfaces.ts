@@ -69,6 +69,13 @@ export interface IReverseGeoCoderAsync {
   getGeoInformation(latLonPair: number[]): Promise<IGeoAddress>;
 }
 
+export interface ICombinedReverseGeocoderService {
+  getGeoInformation(latLonPair: number[]): Promise<IGeoAddress>;
+  getHungarianGeoInformation(
+    latLonPair: number[],
+  ): Promise<IHungarianRegionalInformation>;
+}
+
 export interface IReverseGeoCoderService {
   serverEventChannel: Subject<any>;
   lastGeocodedStroke: Subject<IStroke>;

@@ -5,7 +5,7 @@
       "lint": "eslint \"**/*.ts\" --fix",
       "rimraf": "rimraf dist",
       "copy-assets": "copyfiles \"static-json-data/*.json\" package*.json \"init-on*\" init.json dist",
-      "build-webpack": "webpack --config webpack.main.app.config.js && webpack --config webpack.revgeo.app.config.js && webpack --config webpack.test-output.config.js",
+      "build-webpack": "webpack --config webpack.main.app.config.js && webpack --config webpack.test-output.config.js",
       "prestart-local": "npm run build",
       "start-local": "pushd dist && init-on-windows.cmd",
       "build": "npm run rimraf && npm run build-webpack && npm run copy-assets",
@@ -40,7 +40,8 @@
       "socket.io": "^2.4.1",
       "swagger-express": "^1.0.5",
       "websocket": "^1.0.33",
-      "wherewolf": "^1.0.3"
+      "wherewolf": "^1.0.3",
+      "yml-config-reader": "^0.1.4"
    },
    "devDependencies": {
       "@morgan-stanley/ts-mocking-bird": "^0.4.0",

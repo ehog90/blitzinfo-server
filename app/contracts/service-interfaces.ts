@@ -1,6 +1,3 @@
-/*
- Az egyes osztályokhoz tartó interfészek publikus metódusainak leírásai.
- */
 import { Subject } from 'rxjs';
 import {
   ICountryReverseGeoCodeResult,

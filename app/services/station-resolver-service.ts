@@ -41,20 +41,27 @@ class StationResolver implements IStationResolver {
     this.timer.subscribe(() => this.stationUpdateRequested());
     lightningMapsDataService.lastReceived
       .pipe(filter((stroke) => !!stroke.sta))
-      .subscribe((stroke) => {
-        const stations: number[] = toPairs(stroke.sta).map((x) => Number(x[0]));
-
-        const bulk = StationsMongoModel.collection.initializeUnorderedBulkOp();
-        for (const station of stations) {
-          bulk
-            .find({ sId: station })
-            .upsert()
-            .update({
-              $inc: { detCnt: 1 },
+      .subscribe(async (stroke) => {
+        try {
+          const stations: number[] = toPairs(stroke.sta).map((x) =>
+            Number(x[0]),
+          );
+          await StationsMongoModel.updateMany(
+            { sId: { $in: stations } },
+            {
+              $inc: { detCnt: 1 } as any,
               $set: { lastSeen: new Date(stroke.time) },
-            });
+            },
+          ).exec();
+        } catch (err) {
+          loggerInstance.sendWarningMessage(
+            0,
+            0,
+            `Stations`,
+            `Station metadata not updated`,
+            false,
+          );
         }
-        bulk.execute();
       });
   }
 

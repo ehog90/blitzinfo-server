@@ -70,48 +70,58 @@ class StationResolver implements IStationResolver {
   // #region Private Methods (2)
 
   private async stationDataReceived(stationsData: IStationsFromWeb[]) {
-    loggerInstance.sendNormalMessage(
-      0,
-      0,
-      'Stations',
-      `${stationsData.length} station data downloaded, updating station metadata for stations`,
-      false,
-    );
-
-    for (const stationData of stationsData) {
-      if (!validateCoordinates(stationData.latLon)) {
-        loggerInstance.sendWarningMessage(
-          0,
-          0,
-          `Stations`,
-          `Station metadata not updated: Invalid coords: ${stationData.latLon}`,
-          false,
-        );
-        continue;
-      }
-      const stationGeoInformation = await combinedReverseGeocooder.getGeoInformation(
-        stationData.latLon,
+    try {
+      loggerInstance.sendNormalMessage(
+        0,
+        0,
+        'Stations',
+        `${stationsData.length} station data downloaded, updating station metadata for stations`,
+        false,
       );
-      await StationsMongoModel.updateOne(
-        { sId: stationData.sId },
-        {
-          $set: {
-            latLon: stationData.latLon,
-            name: stationData.name,
-            location: stationGeoInformation,
-          },
-        },
-        { upsert: true },
-      ).exec();
-    }
 
-    loggerInstance.sendNormalMessage(
-      0,
-      0,
-      `Stations`,
-      `Station metadata updated.`,
-      false,
-    );
+      for (const stationData of stationsData) {
+        if (!validateCoordinates(stationData.latLon)) {
+          loggerInstance.sendWarningMessage(
+            0,
+            0,
+            `Stations`,
+            `Station metadata not updated: Invalid coords: ${stationData.latLon}`,
+            false,
+          );
+          continue;
+        }
+        const stationGeoInformation = await combinedReverseGeocooder.getGeoInformation(
+          stationData.latLon,
+        );
+        await StationsMongoModel.updateOne(
+          { sId: stationData.sId },
+          {
+            $set: {
+              latLon: stationData.latLon,
+              name: stationData.name,
+              location: stationGeoInformation,
+            },
+          },
+          { upsert: true },
+        ).exec();
+      }
+
+      loggerInstance.sendNormalMessage(
+        0,
+        0,
+        `Stations`,
+        `Station metadata updated.`,
+        false,
+      );
+    } catch (exc) {
+      loggerInstance.sendWarningMessage(
+        0,
+        0,
+        `Stations`,
+        `Station metadata not updated: ${exc}`,
+        false,
+      );
+    }
   }
 
   private stationUpdateRequested() {

@@ -70,3 +70,12 @@ metHuParser.invoke();
 socketIoService.invoke();
 stationResolverService.start();
 firebaseMessagingService.invoke();
+
+process.on('unhandledRejection', function (reason, p) {
+  console.log(
+    'Possibly Unhandled Rejection at: Promise ',
+    p,
+    ' reason: ',
+    reason,
+  );
+});

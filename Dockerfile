@@ -14,4 +14,3 @@ EXPOSE 5000
 EXPOSE 5001
 
 CMD node dist/app-main.js --unhandled-rejections=warn
-

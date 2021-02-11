@@ -6,7 +6,7 @@ db:
   host: 192.168.1.22
   db: blitzinfo
 lightningMaps:
-  baseUrl: wss://live.lightningmaps.org
+  baseUrl: wss://live2.lightningmaps.org
 ports:
   rest: 5000
   socketIo: 5001

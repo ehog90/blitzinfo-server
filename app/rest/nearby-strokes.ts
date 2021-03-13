@@ -23,8 +23,10 @@ export async function nearbyStrokes(
             spherical: true,
             maxDistance: 100000,
             distanceField: 'dist',
-            limit: 50000,
           },
+        },
+        {
+          $limit: 50000,
         },
       ],
     );

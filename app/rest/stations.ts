@@ -47,13 +47,13 @@ export async function getStationsAsync(
     const results = await StationsMongoModel.aggregate([
       {
         $geoNear: {
-          limit: count,
           near: { type: 'Point', coordinates: [Number(lon), Number(lat)] },
           distanceField: 'dist',
           includeLocs: 'latLon',
           spherical: true,
         },
       },
+      { $limit: count },
       {
         $addFields: {
           dist: {

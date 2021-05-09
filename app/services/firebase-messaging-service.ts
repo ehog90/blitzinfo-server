@@ -133,7 +133,6 @@ class FirebaseService implements IFirebaseService {
     const devices = (await mongo.LocationRecentMongoModel.aggregate([
       {
         $geoNear: {
-          limit: 1500,
           near: { type: 'Point', coordinates: stroke.latLon },
           distanceField: 'dist',
           includeLocs: 'latLon',
@@ -141,6 +140,7 @@ class FirebaseService implements IFirebaseService {
           maxDistance: 50000.0,
         },
       },
+      { $limit: 1500 },
       {
         $addFields: {
           dist: {
@@ -212,7 +212,6 @@ class FirebaseService implements IFirebaseService {
     const savedLocations = (await mongo.SavedLocationMongoModel.aggregate([
       {
         $geoNear: {
-          limit: 1500,
           near: { type: 'Point', coordinates: stroke.latLon },
           distanceField: 'dist',
           includeLocs: 'latLon',
@@ -220,6 +219,7 @@ class FirebaseService implements IFirebaseService {
           maxDistance: 50000.0,
         },
       },
+      { $limit: 1500 },
       {
         $addFields: {
           dist: {

@@ -303,7 +303,6 @@ export class SocketIoServer implements ISocketIoServer {
             [
               {
                 $geoNear: {
-                  limit: SocketIoServer.MAXIMAL_DATA,
                   near: {
                     type: 'Point',
                     coordinates: connection.userInfo.latLon,
@@ -313,6 +312,7 @@ export class SocketIoServer implements ISocketIoServer {
                   spherical: true,
                 },
               },
+              { $limit: SocketIoServer.MAXIMAL_DATA },
               {
                 $project: {
                   latLon: 1,

@@ -1,0 +1,18 @@
+export const init = {
+  v: 24,
+  i: {},
+  s: true,
+  x: 0,
+  w: 0,
+  tx: 0,
+  tw: 1,
+  a: 4,
+  from_lightningmaps_org: true,
+  z: 3,
+  b: true,
+  h: '#y=0;x=0;z=0;t=1;m=sat;r=0;s=0;o=0;b=80;n=0;d=1;dl=2;dc=0;ra=1;',
+  l: 1,
+  t: 1,
+  p: [90, 180, -90, -180],
+  r: 'A',
+};

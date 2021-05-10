@@ -1,0 +1,11 @@
+{
+  "html.format.endWithNewline": true,
+  "vsicons.presets.angular": true,
+  "typescript.preferences.quoteStyle": "single",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "eslint.alwaysShowStatus": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}

@@ -1,15 +1,15 @@
 {
-  "exclude": [
-    "testing",
-    "node_modules",
-    "other"
-  ],
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "node",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
     "target": "es2017",
     "sourceMap": true,
-    "outDir": "dist",
-    "baseUrl": "./"
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true
   }
 }

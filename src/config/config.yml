@@ -2,9 +2,6 @@ environment: PROD
 geocoding:
   host: mongo-revgeo
   port: 8889
-db:
-  host: 192.168.1.22
-  db: blitzinfo
 lightningMaps:
   baseUrl: wss://live.lightningmaps.org
 ports:

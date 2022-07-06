@@ -31,7 +31,7 @@
       "kareem": "^2.3.2",
       "lodash": "^4.17.20",
       "method-override": "^3.0.0",
-      "moment": "^2.29.1",
+      "moment": "^2.29.4",
       "mongoose": "^5.11.14",
       "mongoose-auto-increment-reworked": "^1.2.1",
       "morgan": "^1.10.0",

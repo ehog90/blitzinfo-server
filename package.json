@@ -23,7 +23,7 @@
       "cli-color": "^1.4.0",
       "commander": "^2.20.3",
       "cors": "^2.8.5",
-      "express": "^4.17.1",
+      "express": "^4.17.3",
       "geojson-utils": "^1.1.0",
       "getjson": "0.0.1",
       "gm": "^1.23.1",
